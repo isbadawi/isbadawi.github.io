@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Ismail Badawi]]></title>
+  <link href="http://ismail.badawi.io/atom.xml" rel="self"/>
+  <link href="http://ismail.badawi.io/"/>
+  <updated>2013-04-15T17:04:49-04:00</updated>
+  <id>http://ismail.badawi.io/</id>
+  <author>
+    <name><![CDATA[Ismail Badawi]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+</feed>
