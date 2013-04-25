@@ -114,30 +114,43 @@ public class HelloAgain {
 }
 ```
  
-The implementation of `CoverageTracker` could be as simple as this:
+The implementation of `CoverageTracker` could be as simple as this.
 
 ```java The coverage tracker.
 package io.badawi.coverage.runtime;
 
-import com.google.common.collect.Table;
-import com.google.common.collect.HashBasedTable;
+import java.util.Map;
+import java.util.HashMap;
 
 public class CoverageTracker {
   // Maps filenames and line numbers to true (executed) or false (not executed).
-  private static Table<String, Integer, Boolean> coverage = HashBasedTable.create();
+  private static Map<String, Map<Integer, Boolean> coverage =
+      new HashMap<String, Map<Integer, Boolean>>();
 
   // Serializes coverage in some format; we'll revisit this.
-  public static void writeCoverageToFile(String filename) { }
+  public static void writeCoverageToFile() { }
 
   public static void markExecutable(String filename, int line) {
-    coverage.put(filename, line, false);
+    if (!coverage.contains(filename)) {
+      coverage.put(filename, new HashMap<Integer, Boolean>());
+    }
+    coverage.get(filename).put(line, false);
   }
 
   public static void markExecuted(String filename, int line) {
-    coverage.put(filename, line, true);
+    if (!coverage.contains(filename)) {
+      coverage.put(filename, new HashMap<Integer, Boolean>());
+    }
+    coverage.get(filename).put(line, true);  
   }
 }
 ```
+
+(Note that although we'll use Guava in other parts of the code,
+`CoverageTracker` is used by the instrumented code, and it might be
+awkward to add a runtime dependency just to save a few lines of code.
+This is why I'm using a `Map<String, Map<Integer, Boolean>>` instead
+of a `Table<String, Integer, Boolean>`).
 
 Just a slight hiccup. In general, we can't really know ahead of time when or where
 a program will terminate, so it won't do to just call `writeCoverageToFile` at the end of
@@ -149,7 +162,7 @@ block to `CoverageTracker`:
 static {
   Runtime.getRuntime().addShutdownHook(new Thread() {
     @Override public void run() {
-      writeCoverageToFile("coverage_report.txt");
+      writeCoverageToFile();
     }
   });
 }
@@ -495,6 +508,129 @@ and what we can do with it.
 
 Generating a coverage report
 ----------------------------
+
+We're going to generate our report in lcov format. This format is
+understood by tools like `lcov` and `genhtml`, which can use it to
+spit out a nice HTML report where the source code is annotated
+with colors that show which lines were executed.
+
+The format isn't very complicated. It consists of a series of records,
+one for each source file. Within each record, you specify which lines
+were executed. You can also specify things like function and branch
+coverage, but we won't use those features.
+
+An lcov record for our hello world example might look like
+
+```text An lcov record.
+SF:/path/to/Hello.java
+DA:3,1
+end_of_record
+```
+
+The `SF` line signals the start of a new record for the source file
+at the given path, and `end_of_record` (obviously) signals the end
+of the record. For each executable line, a `DA` line specifies the
+line number and the number of times that line was executed. In our case,
+since we're only tracking whether a line was executed and not how many
+times, we'll only ever put a 1 or 0 there. It wouldn't be difficult to
+change the `CoverageTracker` implements to keep a count, though.
+
+With that in mind, generating a coverage report is straightforward
+and looks like this.
+
+```java Generating the coverage report.
+private static void writeCoverageToFile() {
+  String lcovCoverage = generateLcov();
+  FileWriter writer = null;
+  try {
+    writer = new FileWriter("coverage_report.lcov");
+    writer.write(lcovCoverage);
+  } catch (IOException e) {
+    throw new RuntimeException(e);
+  } finally {
+    try {
+      writer.close();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+}
+
+private static String generateLcov() {
+  StringBuilder sb = new StringBuilder();
+  for (String filename : coverage.keySet()) {
+    sb.append("SF:" + filename + "\n");
+    for (Map.Entry<Integer, Boolean> line : coverage.get(filename).entrySet()) {
+      sb.append(String.format("DA:%d,%d\n", line.getKey(), line.getValue() ? 1 : 0));
+    }
+    sb.append("end_of_record\n");
+  }
+  return sb.toString();
+}
+```
+
+(`writeCoverageToFile` is a bit awkward, again because I don't want
+to use Guava in the runtime code. It could just be a call to
+`Files.write`).
+
+We're close to the payoff. We can change the `main` method of
+`CoverageVisitor` to take a class as a command line argument
+instead of hard coding in our `Hello` class. Since for now we're
+assuming a single input class, we'll just print the instrumented
+class to standard output and let the caller decide where to put it.
+
+```java A proper main method.
+public static void main(String[] args) throws IOException, ParseException {
+    File file = new File(args[0]);
+    CompilationUnit unit = JavaParser.parse(new FileReader(file));
+    unit.accept(new CoverageVisitor(file.getAbsolutePath()), null);
+    System.out.println(unit.toString());
+}
+```
+
+Now we should be able to instrument, compile and execute a class,
+and use `genhtml` to visualize the resulting coverage report. The
+following assumes `CoverageVisitor` was compiled and the
+class file is in a directory called `bin`:
+
+```bash Putting it all together.
+$ pwd
+/Users/isbadawi/Documents/workspace/coverage-example
+$ cat > Hello.java
+public class Hello {
+  public static void main(String[] args) {
+    System.out.println("hello, world");
+  }
+}
+$ mkdir instrumented
+$ java -cp bin io.badawi.coverage.CoverageVisitor Hello.java > instrumented/Hello.java
+$ cd instrumented
+$ cat Hello.java
+public class Hello {
+
+    public static void main(String[] args) {
+        io.badawi.coverage.runtime.CoverageTracker.markExecutable("/Users/isbadawi/Documents/workspace/coverage-example/Hello.java", 3);
+  
+        {
+            io.badawi.coverage.runtime.CoverageTracker.markExecuted("/Users/isbadawi/Documents/workspace/coverage-example/Hello.java", 3);
+            System.out.println("hello, world");
+        }
+    }
+}
+$ javac -cp .:../bin Hello.java
+$ java -cp .:../bin Hello
+hello, world
+$ ls
+Hello.class           Hello.java            coverage_report.lcov
+$ cat coverage_report.lcov
+SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
+DA:3,1
+end_of_record
+$ genhtml -o report coverage_report.lcov
+$ cd report
+$ python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+```
 
 [javaparser]: https://github.com/matozoid/javaparser
 [visitor-wiki]: http://en.wikipedia.org/wiki/Visitor_pattern
