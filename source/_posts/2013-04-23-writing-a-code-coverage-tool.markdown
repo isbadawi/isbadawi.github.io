@@ -37,18 +37,7 @@ public class Hello {
 
 We'd like to rewrite this so that after it's done executing, it will have
 produced a little coverage report in a text file, saying that line 5 was
-executed. 
-
-Notice that even though there are seven lines in this file, we really only
-care about line 5. Line 5 is the only executable line; the rest are noise.
-If line 5 is executed, logically we should say 100% of the class was covered
-(as opposed to 14.28%, or 1/7). In general, when measuring code coverage, we'll
-want to ignore things like package declarations, imports, blank lines,
-comments and so on. So before we have the program start marking off lines
-as executed, we have to make it start with an initial *baseline coverage*,
-which will have an entry mapping to false for every executable line.
-
-With that in mind, a coverage tool could transform the code into this:
+executed. The rewritten class might look like this:
 
 ```java The same class, primed for code coverage.
 package io.badawi.hello;
@@ -57,21 +46,29 @@ import io.badawi.coverage.runtime.CoverageTracker;
 
 public class Hello {
   public static void main(String[] args) {
-    CoverageTracker.markExecutable("/path/to/Hello.java", 5);
-
     System.out.println("hello, world");
     CoverageTracker.markExecuted("/path/to/Hello.java", 5);
 
-    CoverageTracker.writeCoverageToFile("coverage_report.txt");
+    CoverageTracker.writeCoverageToFile();
   }
 }
 ```
 
-Straightforward, right? You start by listing off all the executable lines.
-Then, after the line executes, you mark it as executed. Then, before the
-program exits, you write out the coverage information somewhere.
+Straightforward, right?  After a line executes, you mark it as executed.
+Then, before the program exits, you write out the coverage information somewhere.
 The rewriting process -- generating this code automatically -- might be a
 bit involved, but conceptually what we're doing should be easy to understand.
+
+Notice that even though there are seven lines in this file, we really only
+care about line 5. Line 5 is the only executable line; the rest are noise.
+If line 5 is executed, logically we should say 100% of the class was covered
+(as opposed to 14.28%, or 1/7). It's not quite enough, then, to know that line
+5 was executed; to produce an accurate coverage report, we have
+to know also which lines *could* have been executed (in this case, only line 5).
+In doing this, we'll want to ignore things like package declarations, imports,
+blank lines, comments and so on. We'll see later how we can produce this information
+(often called initial or baseline coverage) as part of the rewriting process.
+
 Here's another contrived example, this time with branching control flow:
 
 ```java The input class.
@@ -95,10 +92,6 @@ import io.badawi.coverage.runtime.CoverageTracker;
 
 public class HelloAgain {
   public static void main(String[] args) {
-    CoverageTracker.markExecutable("/path/to/HelloAgain.java", 5);
-    CoverageTracker.markExecutable("/path/to/HelloAgain.java", 6);
-    CoverageTracker.markExecutable("/path/to/HelloAgain.java", 8);
-
     if (1 < 2) {
       CoverageTracker.markExecuted("/path/to/HelloAgain.java", 5);
 
@@ -109,7 +102,7 @@ public class HelloAgain {
       CoverageTracker.markExecuted("/path/to/HelloAgain.java", 8); 
     }
     
-    CoverageTracker.writeCoverageToFile("coverage_report.txt");
+    CoverageTracker.writeCoverageToFile();
   }
 }
 ```
@@ -130,13 +123,6 @@ public class CoverageTracker {
   // Serializes coverage in some format; we'll revisit this.
   public static void writeCoverageToFile() { }
 
-  public static void markExecutable(String filename, int line) {
-    if (!coverage.contains(filename)) {
-      coverage.put(filename, new HashMap<Integer, Boolean>());
-    }
-    coverage.get(filename).put(line, false);
-  }
-
   public static void markExecuted(String filename, int line) {
     if (!coverage.contains(filename)) {
       coverage.put(filename, new HashMap<Integer, Boolean>());
@@ -152,11 +138,11 @@ awkward to add a runtime dependency just to save a few lines of code.
 This is why I'm using a `Map<String, Map<Integer, Boolean>>` instead
 of a `Table<String, Integer, Boolean>`).
 
-Just a slight hiccup. In general, we can't really know ahead of time when or where
+There is just a slight problem. In general, we can't really know ahead of time when or where
 a program will terminate, so it won't do to just call `writeCoverageToFile` at the end of
 `main`. The easiest way to ensure the coverage report is always generated to put the
 call to `writeCoverageToFile` inside a JVM shutdown hook, so we can add this static initializer
-block to `CoverageTracker`:
+block to `CoverageTracker`, and drop the calls in the instrumented code:
 
 ```java Write coverage to file on shutdown.
 static {
@@ -325,9 +311,9 @@ list containing it, and insert our coverage tracking statement after it
 -- we'd be modifying lists of statements as we're iterating over them, which
 causes trouble.
 
-Javaparser already contains infrastructure -- a special visitor implementation
-called `ModifierVisitorAdapter`, which has each `visit` method return a `Node`
-to serve as the replacement for the current node. So we can replace an
+Javaparser already contains infrastructure to modify ASTs, in the form of a special
+visitor implementation called `ModifierVisitorAdapter`, which has each `visit`
+method return a `Node` to serve as the replacement for the current node. So we can replace an
 arbitrary node with another. We can also use this to emulate inserting a statement
 after the current statement; just replace the statement with a block statement
 containing it and its new successor.
@@ -350,14 +336,14 @@ public class CoverageVisitor extends ModifierVisitorAdapter<Object> {
   @Override
   public Node visit(ExpressionStmt node, Object arg) {
     BlockStmt block = new BlockStmt();
-    ASTHelper.addStmt(block, makeCoverageTrackingCall("markExecuted", filename, node.getBeginLine()));
     ASTHelper.addStmt(block, n);
+    ASTHelper.addStmt(block, makeCoverageTrackingCall(filename, node.getBeginLine()));
     return block;
   }
 
-  private Statement makeCoverageTrackingCall(String methodName, String filename, int line) {
+  private Statement makeCoverageTrackingCall(String filename, int line) {
     NameExpr coverageTracker = ASTHelper.createNameExpr("io.badawi.coverage.runtime.CoverageTracker");
-    MethodCallExpr call = new MethodCallExpr(coverageTracker, methodName);
+    MethodCallExpr call = new MethodCallExpr(coverageTracker, "markExecutable");
     ASTHelper.addArgument(call, new StringLiteralExpr(filename));
     ASTHelper.addArgument(call, new IntegerLiteralExpr(String.valueOf(line)));
     return new ExpressionStmt(call);
@@ -365,15 +351,17 @@ public class CoverageVisitor extends ModifierVisitorAdapter<Object> {
 }
 ```
 
-`makeCoverageTrackingCall` just creates a call to `markExecuted`. We insert the fully qualified name
-of `CoverageTracker` there instead of adding an import; this wards against the case where the
-subject code uses the name `CoverageTracker`. As arguments, we pass in the file name, and the line
-number of the node in question. Parsers typically retain information about the positions of nodes
-in order to generate useful error messages. This is what `node.getBeginLine()` does.
-
-The interesting part is the `visit` method. When the traversal encounters an expression statement
-(like a method call as a statement), it replaces it with a block statement containing the call
-to `markExecuted`, followed by the original statement.
+* The key point here is that parsers retain information about the positions (line and column offsets)
+of AST nodes, typically to generate useful error messages. The call to `node.getBeginLine()` returns
+the line in the file where the code fragment corresponding to that node begins. 
+* The path of the source file can't be known in general (because we could be parsing an arbitrary string, as we did above), so we
+pass it in ourselves. 
+* `makeCoverageTrackingCall` just creates a call to `markExecuted`, with the filename and line number
+as arguments. Note that we insert the fully qualified name of `CoverageTracker` there instead of adding
+an import; this wards against the case where the subject code is already using the name `CoverageTracker`.
+* The `visit` method runs whenever the traversal encounters an expression statement
+(for example, a standalone method call) and returns a block statement containing the original statement,
+followed by the call to `markExecuted`.
 
 We can equip this class with a `main` method similar to our previous examples:
 
@@ -402,100 +390,43 @@ public class Hello {
 
      public static void main(String[] args) {
          {
-             io.badawi.coverage.runtime.CoverageTracker.markExecuted("/path/to/Hello.java", 5);
              System.out.println("hello, world");
+             io.badawi.coverage.runtime.CoverageTracker.markExecuted("/path/to/Hello.java", 5);
          }
      }
 }
 
 ```
 
-This is close to what we want. The only thing missing is the preamble where we call
-`markExecutable` for each executable line. We can easily figure out which lines are
-executable here; whenever we create a call to `markExecuted`, there should be a corresponding
-call to `markExecutable` in the preamble. We can add a new field to the class and maintain it,
-like this:
+which is what we wanted.
+
+Now we still need to figure out our baseline coverage -- which lines are executable?
+It should be easy enough to see that the executable lines are precisely those lines for which
+we've created a `markExecuted` call. We can reuse our `CoverageTracker` and just mark the line
+as executable at that point:
 
 ```java Keep track of executable lines.
-private Multimap<String, Integer> executableLines = HashBasedTable.create();
-
-private Statement makeCoverageTrackingCall(int line) {
-  executableLines.put(filename, line);
+private Statement makeCoverageTrackingCall(String filename, int line) {
+  CoverageTracker.markExecutable(filename, line);
   // same as before
 }
 ```
- 
-Then we can add the preamble to the main method when we're done. In general
-we won't know ahead of time which method in the main method, so we'll also
-find it along the way, like this:
 
-```java Add preamble to main method.
-private boolean isMainMethod(MethodDeclaration method) {
-  return ModifierSet.isPublic(method.getModifiers())
-      && ModifierSet.isStatic(method.getModifiers())
-      && method.getType() instanceof VoidType
-      && method.getName().equals("main")
-      && method.getParameters() != null
-      && method.getParameters().size() == 1
-      && method.getParameters().get(0).getType().equals(
-      ASTHelper.createReferenceType("String", 1));
-}  
+where `markExecutable` is implemented the same way as `markExecuted`, only with `false`
+instead of `true`:
 
-private MethodDeclaration mainMethod;
+```java Implementation of markExecutable.
 
-@Override
-public Node visit(MethodDeclaration node, Object arg) {
-  if (isMainMethod(node)) {
-    mainMethod = node;
+public static void markExecutable(String filename, int line) {
+  if (!coverage.contains(filename)) {
+    coverage.put(filename, new HashMap<Integer, Boolean>());
   }
-  return super.visit(node);
-}
-
-@Override
-public Node visit(CompilationUnit node, Object arg) {
-  Node result = super.visit(node);
-  addPreamble(mainMethod);
-  return result;
-}
-
-private void addPreamble(MethodDeclaration method) {
-  List<Statement> body = mainMethod.getBody().getStmts();
-  for (String filename : executableLines.keySet()) {
-    for (Integer line : executableLines.get(filename)) {
-      body.add(0, makeCoverageTrackingCall("markExecutableLine", filename, line);
-    }
-  } 
-}
+  coverage.get(filename).put(line, false);
+}   
 ```
 
-The `isMainMethod` method just checks the given method declaration against the expected signature
-of the `main` method, i.e. that it's public, static, returns `void`, is named `main`, and has a
-single argument of type `String[]`. (Javaparser calls array types reference types, for some reason.
-The usual reference types are called "class or interface types").
-
-When we visit a `MethodDeclaration`, we just check whether it's `main`, and if so remember it. Then, once we're done,
-which is after visiting the entire `CompilationUnit`, we add the preamble to the main method. This just means iterating
-over the executable lines and creating a call for each one, using the same `makeCoverageTrackingCall` method as before.
-
-Running the main method now spits out:
-
-```text The output.
-package io.badawi.hello;
-
-public class Hello {
-
-    public static void main(String[] args) {
-        io.badawi.coverage.runtime.CoverageTracker.markExecutable("/path/to/Hello.java", 5);
-        {
-            io.badawi.coverage.runtime.CoverageTracker.markExecuted("/path/to/Hello.java", 5);
-            System.out.println("hello, world");
-        }
-    }
-}
-```
-
-which is what we wanted.
-
+Then the coverage report will be generated via the same shutdown hook we added earlier.
+ 
 We're not quite done, though, for a couple of reasons:
 
 * we only handle expression statements. We wouldn't be able to handle our
@@ -541,9 +472,10 @@ and looks like this.
 ```java Generating the coverage report.
 private static void writeCoverageToFile() {
   String lcovCoverage = generateLcov();
+  String coverageReportPath = System.getProperty("coverage.report.path", "coverage_report.lcov");
   FileWriter writer = null;
   try {
-    writer = new FileWriter("coverage_report.lcov");
+    writer = new FileWriter(coverageReportPath);
     writer.write(lcovCoverage);
   } catch (IOException e) {
     throw new RuntimeException(e);
@@ -568,6 +500,10 @@ private static String generateLcov() {
   return sb.toString();
 }
 ```
+
+Note how we read the output path from the `coverage.report.path` property; this is
+useful since we generate two reports, one during instrumentation and one during
+execution.
 
 (`writeCoverageToFile` is a bit awkward, again because I don't want
 to use Guava in the runtime code. It could just be a call to
@@ -603,17 +539,20 @@ public class Hello {
   }
 }
 $ mkdir instrumented
-$ java -cp bin io.badawi.coverage.CoverageVisitor Hello.java > instrumented/Hello.java
+$ java -cp bin -Dcoverage.report.path=instrumented/baseline_coverage.lcov \
+       io.badawi.coverage.CoverageVisitor Hello.java > instrumented/Hello.java
 $ cd instrumented
+$ cat baseline_coverage.lcov
+SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
+DA:3,0
+end_of_record      
 $ cat Hello.java
 public class Hello {
 
     public static void main(String[] args) {
-        io.badawi.coverage.runtime.CoverageTracker.markExecutable("/Users/isbadawi/Documents/workspace/coverage-example/Hello.java", 3);
-  
         {
-            io.badawi.coverage.runtime.CoverageTracker.markExecuted("/Users/isbadawi/Documents/workspace/coverage-example/Hello.java", 3);
             System.out.println("hello, world");
+            io.badawi.coverage.runtime.CoverageTracker.markExecuted("/Users/isbadawi/Documents/workspace/coverage-example/Hello.java", 3);
         }
     }
 }
@@ -626,7 +565,8 @@ $ cat coverage_report.lcov
 SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
 DA:3,1
 end_of_record
-$ genhtml -o report coverage_report.lcov
+$ lcov -a ../baseline_coverage.lcov -a coverage_report.lcov -o combined_coverage.lcov
+$ genhtml combined_coverage.lcov -o report
 $ cd report
 $ python -m SimpleHTTPServer
 Serving HTTP on 0.0.0.0 port 8000 ...
