@@ -526,13 +526,13 @@ public static void main(String[] args) throws IOException, ParseException {
 
 Now we should be able to instrument, compile and execute a class,
 and use `genhtml` to visualize the resulting coverage report. The
-following assumes `CoverageVisitor` was compiled and the
-class file is in a directory called `bin`:
+following assumes `CoverageVisitor` and `CoverageTracker` were compiled
+and the class files are in a directory called `bin`:
 
 ```bash Putting it all together.
 $ pwd
 /Users/isbadawi/Documents/workspace/coverage-example
-$ cat > Hello.java
+$ cat Hello.java
 public class Hello {
   public static void main(String[] args) {
     System.out.println("hello, world");
@@ -556,19 +556,15 @@ public class Hello {
         }
     }
 }
-$ javac -cp .:../bin Hello.java
-$ java -cp .:../bin Hello
+$ javac -cp .:../bin Hello.java && java -cp .:../bin Hello
 hello, world
-$ ls
-Hello.class           Hello.java            coverage_report.lcov
 $ cat coverage_report.lcov
 SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
 DA:3,1
 end_of_record
-$ lcov -a ../baseline_coverage.lcov -a coverage_report.lcov -o combined_coverage.lcov
+$ lcov -a baseline_coverage.lcov -a coverage_report.lcov -o combined_coverage.lcov
 $ genhtml combined_coverage.lcov -o report
-$ cd report
-$ python -m SimpleHTTPServer
+$ cd report && python -m SimpleHTTPServer
 Serving HTTP on 0.0.0.0 port 8000 ...
 ```
 
