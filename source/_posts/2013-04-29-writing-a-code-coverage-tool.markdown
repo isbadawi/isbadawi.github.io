@@ -78,7 +78,7 @@ import java.util.HashMap;
 
 public class CoverageTracker {
   // Maps filenames and line numbers to true (executed) or false (not executed).
-  private static Map<String, Map<Integer, Boolean> coverage =
+  private static Map<String, Map<Integer, Boolean>> coverage =
       new HashMap<String, Map<Integer, Boolean>>();
 
   // Serializes coverage in some format; we'll revisit this.
