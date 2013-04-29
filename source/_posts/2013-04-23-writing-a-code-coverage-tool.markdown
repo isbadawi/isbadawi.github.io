@@ -5,7 +5,14 @@ date: 2013-04-23 22:11
 comments: true
 categories: [code, java, coverage]
 ---
+ 
+*Disclaimer: I'm not quite sure who the audience is for this. I guess it's
+describing a little weekend project I put together, but it's also written kind of
+like a tutorial, so you can maybe follow along. I don't think it's particularly
+beginner-friendly, though. Some knowledge of Java is assumed, but not much.
+The code is available [on github](https://github.com/isbadawi/coverage-example).*
 
+                                       
 Code coverage measures roughly how much, and which parts, of the source code
 of a program were exercised in a given execution of that program 
 (or more often, during the execution of a test suite for that
@@ -59,54 +66,6 @@ Then, before the program exits, you write out the coverage information somewhere
 The rewriting process -- generating this code automatically -- might be a
 bit involved, but conceptually what we're doing should be easy to understand.
 
-Notice that even though there are seven lines in this file, we really only
-care about line 5. Line 5 is the only executable line; the rest are noise.
-If line 5 is executed, logically we should say 100% of the class was covered
-(as opposed to 14.28%, or 1/7). It's not quite enough, then, to know that line
-5 was executed; to produce an accurate coverage report, we have
-to know also which lines *could* have been executed (in this case, only line 5).
-In doing this, we'll want to ignore things like package declarations, imports,
-blank lines, comments and so on. We'll see later how we can produce this information
-(often called initial or baseline coverage) as part of the rewriting process.
-
-Here's another contrived example, this time with branching control flow:
-
-```java The input class.
-package io.badawi.hello;
-
-public class HelloAgain {
-  public static void main(String[] args) {
-    if (1 < 2) {
-      System.out.println("1 < 2");
-    } else {
-      System.out.println("1 >= 2");
-    }
-  }
-}
-```
-
-```java The same class, instrumented.
-package io.badawi.hello;
-
-import io.badawi.coverage.runtime.CoverageTracker;
-
-public class HelloAgain {
-  public static void main(String[] args) {
-    if (1 < 2) {
-      CoverageTracker.markExecuted("/path/to/HelloAgain.java", 5);
-
-      System.out.println("1 < 2");
-      CoverageTracker.markExecuted("/path/to/HelloAgain.java", 6); 
-    } else {
-      System.out.println("1 >= 2");
-      CoverageTracker.markExecuted("/path/to/HelloAgain.java", 8); 
-    }
-    
-    CoverageTracker.writeCoverageToFile();
-  }
-}
-```
- 
 The implementation of `CoverageTracker` could be as simple as this.
 
 ```java The coverage tracker.
@@ -131,7 +90,7 @@ public class CoverageTracker {
   }
 }
 ```
-
+ 
 (Note that although we'll use Guava in other parts of the code,
 `CoverageTracker` is used by the instrumented code, and it might be
 awkward to add a runtime dependency just to save a few lines of code.
@@ -293,13 +252,13 @@ found method call: System.out.println("hello, world")
 found method call: System.out.println("hello, javaparser")
 ```
 
-All the `Visitor` classes have a generic type parameter; each `visit` method
+(All the `Visitor` classes have a generic type parameter; each `visit` method
 takes an extra argument of that type, and the `accept` method also takes
 a value of that type. I guess this can be useful to pass around state that is
 built up during the traversal, but for complicated visitors I tend to use
 a proper, non-anonymous class, and use member variables to keep state. So
 here and in what follows I'll always use `Object` as the type parameter, pass
-in `null` to `accept`, and ignore the extra argument.
+in `null` to `accept`, and ignore the extra argument.)
 
 Now what we're looking to do is traverse the tree, find all the executable
 statements and expressions, and insert our coverage tracking statements
@@ -399,8 +358,20 @@ public class Hello {
 ```
 
 which is what we wanted.
+  
+Baseline coverage
+-----------------
 
-Now we still need to figure out our baseline coverage -- which lines are executable?
+Let's go back to our hello world example for a bit. Notice that even though there are seven
+lines in this file, we really only care about line 5. Line 5 is the only executable line;
+the rest are noise.  If line 5 is executed, logically we should say 100% of the class was covered
+(as opposed to 14.28%, or 1/7). It's not quite enough, then, to know that line
+5 was executed; to produce an accurate coverage report, we have
+to know also which lines *could* have been executed (in this case, only line 5).
+In doing this, we'll want to ignore things like package declarations, imports,
+blank lines, comments and so on. 
+
+Given what we have so far, how do we do this? Which lines are executable?
 It should be easy enough to see that the executable lines are precisely those lines for which
 we've created a `markExecuted` call. We can reuse our `CoverageTracker` and just mark the line
 as executable at that point:
@@ -425,18 +396,9 @@ public static void markExecutable(String filename, int line) {
 }   
 ```
 
-Then the coverage report will be generated via the same shutdown hook we added earlier.
+Then the coverage report will be generated via the same shutdown hook we added earlier (but
+at instrumentation time, not a runtime).
  
-We're not quite done, though, for a couple of reasons:
-
-* we only handle expression statements. We wouldn't be able to handle our
-second example with the if-else statement, for example.
-* we are kind of assuming there is only compilation unit, which won't be
-true in general.
-
-But before we address these though, let's get to the format of the coverage report,
-and what we can do with it.
-
 Generating a coverage report
 ----------------------------
 
@@ -567,6 +529,99 @@ $ genhtml combined_coverage.lcov -o report
 $ cd report && python -m SimpleHTTPServer
 Serving HTTP on 0.0.0.0 port 8000 ...
 ```
+
+We use the `lcov` command to merge together our baseline and runtime coverage
+reports. (In this case, the runtime coverage report is enough, but in general
+this step is necessary). Then we feed the merged report to `genhtml`, which
+generates a little HTML report. `python -m SimpleHTTPServer` just serves up the
+contents of the current directory on port 8000. Pointing your browser to
+`localhost:8000` should then show a nice coverage report (which you can see
+[here](/coverage-report) if you haven't been following along).
+
+Handling everything
+-------------------
+
+Now that's we've got this running end-to-end as sort of proof of concept,
+we can go back and tie up some loose ends. `CoverageVisitor` only instruments
+expression statements, for simplicity and because that's the only kind of
+statement the hello world example contained. We'd like to extend our approach
+to handle everything.
+
+If we worked at level of statements, we'd need to write code to handle all the different
+kinds of statements -- if statements, for loops, while loops, throw statements,
+assert statements, and so on. For each of these we'd need to come up with a
+transformation that inserted coverage tracking calls in the right place. A simpler
+solution would be to work with expressions, and try to come up with a single transformation
+that works for all expressions.
+
+One idea would be to take our `markExecuted` method and have it take an expression
+as an argument and return its value, like this:
+
+```java markExecuted as an expression
+public static <T> T markExecuted(String filename, int line, T expression) {
+  markExecuted(filename, line);
+  return expression;
+}
+```
+
+Then you could essentially wrap expressions in a call to `markExecuted`; the
+expression would evaluate to the same value, and coverage would be tracked.
+For instance, this:
+
+```java An if statement.
+if (1 < 2) {
+  // ...
+}
+```
+
+would become this:
+
+```java The same if statement, instrumented.
+if (CoverageTracker.markExecuted(/* file */, /* line */, 1 < 2)) {
+  // ...
+}
+```
+
+and the same transformation would apply for loop conditions, assertions,
+and so on, without needing to write different cases for them.
+
+There is just a small issue, which is that this won't work if the
+expression has type `void`, since you can't pass
+something of type `void` to a method. This turns out not to be a huge deal; we don't need
+to perform any sort of type inference or anything like that. Expressions of type `void` can only
+occur in two places: expression statements (like our call to `System.out.println`),
+and for loop headers (in the initialization and increment sections). We can can just
+handle those two cases separately, and we'll be fine.
+
+We already took care of expression statements earlier, by inserting the coverage tracking
+call afterwards, as a separate statement. We can use the same sort of idea to take care
+of for loop headers. The initialization and increment sections include comma-separated
+lists of expressions; when considering expressions there, we can insert our coverage
+tracking call as the next element in the comma-separated list.
+
+This should be good. Conceptually, it's simpler than handling every statement separately.
+Unfortunately, the visitor machinery in javaparser doesn't seem to have a mechanism for
+writing a single method that handles all kinds of expressions. The ugly, clumsy way
+around this is to write an `visit` method for every different kind of expression, which
+looks like this:
+
+```java Instrumenting expressions.
+@Override
+public Node visit(ArrayAccessExpr n, Object arg) {
+  return makeCoverageTrackingCall(n);
+}
+
+@Override
+public Node visit(ArrayCreationExpr n, Object arg) {
+  return makeCoverageTrackingCall(n);
+}
+
+// 20-something identical cases
+```
+
+I don't really like this, but conceptually it's still simpler than handling statements
+separately. Even if we went the other way, we'd need to do this to properly handle assert and throw statements;
+we couldn't insert a statement after, since it might not be executed.
 
 [javaparser]: https://github.com/matozoid/javaparser
 [visitor-wiki]: http://en.wikipedia.org/wiki/Visitor_pattern
