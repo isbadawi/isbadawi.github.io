@@ -22,6 +22,8 @@ functions were called, which branches or control flow paths were taken. In
 this post, we'll walk through writing a simplistic coverage collection tool
 for Java.
 
+<!--more-->
+
 The typical way code coverage is measured is by taking the input program
 and rewriting it so that as it executes, it records somewhere which parts
 are executing. For simplicity, we'll focus on line coverage. For line
