@@ -10,7 +10,7 @@ categories: [code, java, coverage]
 describing a fun little project I put together, but it's also written kind of
 like a tutorial, so you can maybe follow along. I don't think it's particularly
 beginner-friendly, though. Some knowledge of Java is assumed, but not much.
-The code is available [on github](https://github.com/isbadawi/coverage-example).*
+The code is available [on github][github-repo].*
 
                                        
 Code coverage is a software metric that measures how much, and which parts, of the source code
@@ -327,7 +327,7 @@ public class CoverageVisitor extends ModifierVisitorAdapter<Object> {
 
   private Statement makeCoverageTrackingCall(String filename, int line) {
     NameExpr coverageTracker = ASTHelper.createNameExpr("io.badawi.coverage.runtime.CoverageTracker");
-    MethodCallExpr call = new MethodCallExpr(coverageTracker, "markExecutable");
+    MethodCallExpr call = new MethodCallExpr(coverageTracker, "markExecuted");
     ASTHelper.addArgument(call, new StringLiteralExpr(filename));
     ASTHelper.addArgument(call, new IntegerLiteralExpr(String.valueOf(line)));
     return new ExpressionStmt(call);
@@ -559,9 +559,9 @@ We use the `lcov` command to merge together our baseline and runtime coverage
 reports. (In this case, the runtime coverage report is enough, but in general
 this step is necessary). Then we feed the merged report to `genhtml`, which
 generates a little HTML report. `python -m SimpleHTTPServer` just serves up the
-contents of the current directory on port 8000. Pointing your browser to
-`localhost:8000` should then show a nice coverage report (which you can see
-[here](/coverage-report) if you haven't been following along).
+contents of the current directory on port 8000. Pointing our browser to
+`localhost:8000` should then show a nice coverage report (which I've placed
+[here](/coverage-report)).
 
 Handling everything
 -------------------
@@ -627,7 +627,7 @@ tracking call as the next element in the comma-separated list.
 This should be good. Conceptually, it's simpler than handling every statement separately.
 Unfortunately, the visitor machinery in javaparser doesn't seem to have a mechanism for
 writing a single method that handles all kinds of expressions. The ugly, clumsy way
-around this is to write an `visit` method for every different kind of expression, which
+around this is to write a `visit` method for every different kind of expression, which
 looks like this:
 
 ```java Instrumenting expressions.
@@ -652,10 +652,9 @@ Where to go from here?
 ----------------------
 
 That covers pretty much everything. We've put together a simplistic line coverage tool for Java, which works
-by instrumenting Java code as a source-to-source transformation. Some closing remarks:
+by instrumenting Java code as a source-to-source transformation. The complete code can be found [on github][github-repo].
+Some closing remarks:
 
-* This post is partly based on my intern project at Google in summer of 2012, where I added support for
-collecting code coverage information from browser-based tests in Google Web Toolkit applications.
 * The most popular Java coverage tool is probably [Emma][emma]. It works by instrumenting bytecode (.class files)
 instead of source code. This has a few advantages; for instance Emma provides a special classloader that can
 instrument code on the fly as it's loaded, which we can't really do with this approach. (The main benefit of this
@@ -663,6 +662,7 @@ approach is that's fairly accessible, and can be explained without requiring kno
 * Not all coverage tools work this way; an interesting one to look at is [coverage.py][coverage-py], which is based
 on [a hook provided by the python interpreter][settrace].
 
+[github-repo]: https://github.com/isbadawi/coverage-example
 [javaparser]: https://github.com/matozoid/javaparser
 [visitor-wiki]: http://en.wikipedia.org/wiki/Visitor_pattern
 [emma]: http://emma.sourceforge.net
