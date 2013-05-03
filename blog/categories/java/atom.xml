@@ -1,0 +1,745 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: java | Ismail Badawi]]></title>
+  <link href="http://ismail.badawi.io/blog/categories/java/atom.xml" rel="self"/>
+  <link href="http://ismail.badawi.io/"/>
+  <updated>2013-05-03T19:41:48-04:00</updated>
+  <id>http://ismail.badawi.io/</id>
+  <author>
+    <name><![CDATA[Ismail Badawi]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Writing a code coverage tool]]></title>
+    <link href="http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool/"/>
+    <updated>2013-05-03T00:00:00-04:00</updated>
+    <id>http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool</id>
+    <content type="html"><![CDATA[<p><em>Disclaimer: I'm not quite sure who the audience is for this. I guess it's
+describing a fun little project I put together, but it's also written kind of
+like a tutorial, so you can maybe follow along. I don't think it's particularly
+beginner-friendly, though. Some knowledge of Java is assumed, but not much.
+The code is available <a href="https://github.com/isbadawi/coverage-example">on github</a>.</em></p>
+
+<p>Code coverage is a software metric that measures how much, and which parts, of the source code
+of a program were exercised in a given execution of that program.
+There are many different flavors of coverage data, for example
+tracking which lines or statements were executed, which
+functions were called, which branches or control flow paths were taken. In
+this post, we'll walk through writing a simplistic coverage collection tool
+for Java.</p>
+
+<!--more-->
+
+
+<p>The typical way code coverage is measured is by taking the input program
+and instrumenting it so that as it executes, it records somewhere which parts
+are executing. For simplicity, we'll focus on line coverage. In that case,
+the instrumented code might maintain a little table in memory, mapping
+file names and line numbers to booleans representing whether that line
+in that file has been executed. As each statement is executed, the appropriate
+entry in the table will be updated.</p>
+
+<p>Here's a simple example, the standard hello world in Java:</p>
+
+<p>```java An contrived example class.
+package io.badawi.hello;</p>
+
+<p>public class Hello {
+  public static void main(String[] args) {</p>
+
+<pre><code>System.out.println("hello, world");
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>We'd like to rewrite this so that after it's done executing, it will have
+produced a little coverage report in a text file, saying that line 5 was
+executed. The rewritten class might look like this:</p>
+
+<p>```java The same class, primed for code coverage.
+package io.badawi.hello;</p>
+
+<p>import io.badawi.coverage.runtime.CoverageTracker;</p>
+
+<p>public class Hello {
+  public static void main(String[] args) {</p>
+
+<pre><code>System.out.println("hello, world");
+CoverageTracker.markExecuted("/path/to/Hello.java", 5);
+
+CoverageTracker.writeCoverageToFile();
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>Straightforward, right?  After a line executes, we mark it as executed.
+Then, before the program exits, we write out the coverage information somewhere.
+Getting a coverage tool to generate this code automatically might be
+bit involved, but conceptually what we're doing should be easy to understand.</p>
+
+<p>The implementation of <code>CoverageTracker</code> could be as simple as this:</p>
+
+<p>```java The coverage tracker.
+package io.badawi.coverage.runtime;</p>
+
+<p>import java.util.Map;
+import java.util.HashMap;</p>
+
+<p>public class CoverageTracker {
+  // Maps filenames and line numbers to true (executed) or false (not executed).
+  private static Map&lt;String, Map&lt;Integer, Boolean>> coverage =</p>
+
+<pre><code>  new HashMap&lt;String, Map&lt;Integer, Boolean&gt;&gt;();
+</code></pre>
+
+<p>  // Serializes coverage in some format; we'll revisit this.
+  public static void writeCoverageToFile() { }</p>
+
+<p>  public static void markExecuted(String filename, int line) {</p>
+
+<pre><code>if (!coverage.contains(filename)) {
+  coverage.put(filename, new HashMap&lt;Integer, Boolean&gt;());
+}
+coverage.get(filename).put(line, true);  
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>(n.b: although we'll use Guava in other parts of the code,
+<code>CoverageTracker</code> is used by the instrumented code, and it might be
+awkward to add a runtime dependency on Guava just to save a few lines of code here.
+This is why I'm using a <code>Map&lt;String, Map&lt;Integer, Boolean&gt;&gt;</code> instead
+of a <code>Table&lt;String, Integer, Boolean&gt;</code>).</p>
+
+<p>There is just a slight problem. In general, we can't really know ahead of time when or where
+a program will terminate, so it won't do to just call <code>writeCoverageToFile</code> at the end of
+<code>main</code>. The easiest way to ensure the coverage report is always generated to put the
+call to <code>writeCoverageToFile</code> inside a JVM shutdown hook, so we can add this static initializer
+block to <code>CoverageTracker</code>, and drop the calls in the instrumented code:</p>
+
+<p>```java Write coverage to file on shutdown.
+static {
+  Runtime.getRuntime().addShutdownHook(new Thread() {</p>
+
+<pre><code>@Override public void run() {
+  writeCoverageToFile();
+}
+</code></pre>
+
+<p>  });
+}
+```</p>
+
+<h2>Instrumenting code</h2>
+
+<p>So far so good, but how do we actually do this rewriting automatically?
+We need a solution that's allow us to insert method calls at the right
+place.</p>
+
+<p>The wrong way to do this is to use some complicated regex-based solution.
+The right way to do this is to parse the code, and work with an
+abstract syntax tree representation. That way, we can work at the level
+of statements and expressions, and not the level of lines in a file, so
+manipulating the program will be simpler. We can transform the syntax tree
+as we see fit and pretty-print (or unparse) it to get back corresponding
+source code.</p>
+
+<h2>Aside: javaparser</h2>
+
+<p>Writing a parser for a language like Java is way outside the scope of this
+blog post. Instead, we'll use a library. There are a few of these for most
+languages; if not, you can probably find a parser generator and a complete
+grammar. I'm going to use <a href="https://github.com/matozoid/javaparser">javaparser</a>, mostly for simplicity;
+it looks nice and standalone. The main downside is it only supports Java 1.5.
+The documentation is also kind of scarce.</p>
+
+<p>The hello world example for javaparser might look like this:</p>
+
+<p>```java Parse a class and pretty-print it using javaparser.
+package io.badawi.hello;</p>
+
+<p>import japa.parser.JavaParser;
+import japa.parser.ParseException;
+import japa.parser.ast.CompilationUnit;</p>
+
+<p>import java.io.StringReader;</p>
+
+<p>public class HelloJavaparser {
+  public static void main(String[] args) throws ParseException {</p>
+
+<pre><code>CompilationUnit unit = JavaParser.parse(new StringReader(new StringBuilder()
+    .append("package io.badawi.hello;\n\n")
+    .append("public class Hello {\n")
+    .append("  public static void main(String[] args) {\n")
+    .append("    System.out.println(\"hello, world\");\n")
+    .append("  }\n")
+    .append("}\n").toString()));
+
+System.out.println(unit.toString());
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>It parses a source file (given here as a string), and gets at an object
+of type <code>CompilationUnit</code>, which is the root of the abstract syntax tree representation.
+Each node in the tree overrides <code>toString()</code> to do pretty-printing, so running this just
+spits out the class declaration for <code>Hello</code>:</p>
+
+<p>```text The output.
+package io.badawi.hello;</p>
+
+<p>public class Hello {</p>
+
+<pre><code>public static void main(String[] args) {
+    System.out.println("hello, world");
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Going slightly further, we'll modify this example to add a statement
+to the main method before getting the text back. It looks like this:</p>
+
+<p>```java Modify the class a bit before generating code.
+package io.badawi.hello;</p>
+
+<p>// snip imports</p>
+
+<p>public class HelloJavaparser {
+  public static void main(String[] args) throws ParseException {</p>
+
+<pre><code>CompilationUnit unit = JavaParser.parse(new StringReader(new StringBuilder()
+    .append("package io.badawi.hello;\n\n")
+    .append("public class Hello {\n")
+    .append("  public static void main(String[] args) {\n")
+    .append("    System.out.println(\"hello, world\");\n")
+    .append("  }\n")
+    .append("}\n").toString()));
+
+// Create an AST fragment representing System.out.println("hello, javaparser")
+NameExpr systemOut = ASTHelper.createNameExpr("System.out");
+MethodCallExpr call = new MethodCallExpr(systemOut, "println");
+ASTHelper.addArgument(call, new StringLiteralExpr("hello, javaparser"));
+
+// Add this statement to the main method
+TypeDeclaration helloClass = unit.getTypes().get(0);
+MethodDeclaration mainMethod = (MethodDeclaration) hello.getMembers().get(0);
+ASTHelper.addStmt(mainMethod.getBody(), call);
+
+System.out.println(unit.toString());
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>By creating AST nodes and connecting them together, we can synthesize new code. Here,
+we create the <code>System.out.println("hello, javaparser")</code> method call by creating a
+<code>MethodCallExpr</code> node that has <code>System.out</code> as a receiver, <code>println</code> as the method name,
+and the string literal <code>"hello, javaparser"</code> as argument.</p>
+
+<p>Starting with the <code>CompilationUnit</code> object, we can navigate the code programmatically,
+and so get at the <code>MethodDeclaration</code> object corresponding to the <code>main</code> method; from
+there, we can get at the body, which is a <code>Block</code> object containing a list of statements,
+and add our newly created statement to it.</p>
+
+<p>(javaparser has this annoying thing where it initializes collections to <code>null</code> instead of using
+empty collections. The <code>ASTHelper.addStmt</code> method adds a statement to a block, making
+sure to create the list if it's null. Similarly <code>ASTHelper.addArgument</code> does the same for
+argument lists of method calls. These functions shouldn't be necessary but that's how the API is.)</p>
+
+<p>Running this spits out the following class:</p>
+
+<p>```text The output.
+package io.badawi.hello;</p>
+
+<p>public class Hello {</p>
+
+<pre><code>public static void main(String[] args) {
+    System.out.println("hello, world");
+    System.out.println("hello, javaparser");
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>which is what we wanted.</p>
+
+<p>Okay, so now we know how to parse Java code and get an AST, how to unparse an AST and get back
+Java code, and the basics of how to synthesize new code and modify the AST. Now what we'll want
+to do is something like "for every statement, do X".
+To achieve this, javaparser has the AST nodes implement <a href="http://en.wikipedia.org/wiki/Visitor_pattern">the Visitor pattern</a>;
+this is nice because we don't have to manually traverse tree and do <code>instanceof</code> checks or whatever;
+we can just implement an interface that specifies what we want to do when we encounter each kind of node,
+and the visitor machinery will take care of traversing and dispatching.</p>
+
+<p>For example, we could replace the <code>System.out.println(unit.toString());</code> at the end of the last
+example with this:</p>
+
+<p>```java Method call visitor.
+unit.accept(new VoidVisitorAdapter<Object>() {
+  @Override public void visit(MethodCallExpr node, Object arg) {</p>
+
+<pre><code>System.out.println("found method call: " + node.toString());
+</code></pre>
+
+<p>  }
+}, null);
+```</p>
+
+<p><code>accept</code> takes care of traversing the AST,
+the given visitor. Here, we just pretty-print every method call we
+see, so the output is:</p>
+
+<p><code>text The output.
+found method call: System.out.println("hello, world")
+found method call: System.out.println("hello, javaparser")
+</code></p>
+
+<p>(n.b. All the <code>Visitor</code> classes have a generic type parameter; each <code>visit</code> method
+takes an extra argument of that type, and the <code>accept</code> method also takes
+a value of that type and passes it around everywhere.
+I guess this can be useful to pass around state that is
+built up during the traversal, but for complicated visitors I tend to use
+a proper, non-anonymous class, and use member variables to keep state. So
+here and in what follows I'll always use <code>Object</code> as the type parameter, pass
+in <code>null</code> to <code>accept</code>, and ignore the extra argument to the <code>visit</code> methods.)</p>
+
+<h2>Back to instrumentation</h2>
+
+<p>Now what we're looking to do is traverse the tree, find all the statements,
+and insert our coverage tracking statements after them. (To start with, we'll
+only handle expression statements, since that's the only kind of statement that
+appears in the hello world example.)</p>
+
+<p>This isn't as straightforward as it sounds, because if we do this naively
+-- given a statement in the tree, walk up the tree to find the statement
+list containing it, and insert our coverage tracking statement after it
+-- we'd be modifying lists of statements as we're iterating over them, which
+causes trouble.</p>
+
+<p>javaparser already contains infrastructure to modify ASTs, in the form of a special
+visitor implementation called <code>ModifierVisitorAdapter</code>, which has each <code>visit</code>
+method return an AST node to serve as the replacement for the current node. So we can replace an
+arbitrary node with another. We can use this facility to emulate inserting a statement
+after the current statement; just replace the statement with a block statement
+containing it and its new successor.</p>
+
+<p>Given this, here's a first go at instrumenting our hello world example:</p>
+
+<p>```java A first go at instrumenting code.
+package io.badawi.coverage;</p>
+
+<p>// snip imports</p>
+
+<p>public class CoverageVisitor extends ModifierVisitorAdapter<Object> {
+  // AST nodes don't know which file they come from, so we'll pass the information in
+  private String filename;</p>
+
+<p>  public CoverageVisitor(String filename) {</p>
+
+<pre><code>this.filename = filename;
+</code></pre>
+
+<p>  }</p>
+
+<p>  @Override
+  public Node visit(ExpressionStmt node, Object arg) {</p>
+
+<pre><code>BlockStmt block = new BlockStmt();
+ASTHelper.addStmt(block, n);
+ASTHelper.addStmt(block, makeCoverageTrackingCall(filename, node.getBeginLine()));
+return block;
+</code></pre>
+
+<p>  }</p>
+
+<p>  private Statement makeCoverageTrackingCall(String filename, int line) {</p>
+
+<pre><code>NameExpr coverageTracker = ASTHelper.createNameExpr("io.badawi.coverage.runtime.CoverageTracker");
+MethodCallExpr call = new MethodCallExpr(coverageTracker, "markExecuted");
+ASTHelper.addArgument(call, new StringLiteralExpr(filename));
+ASTHelper.addArgument(call, new IntegerLiteralExpr(String.valueOf(line)));
+return new ExpressionStmt(call);
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<ul>
+<li>The key point here is that parsers retain information about the positions (line and column offsets)
+of AST nodes, typically to generate useful error messages. The call to <code>node.getBeginLine()</code> returns
+the line in the file where the code fragment corresponding to that node begins.</li>
+<li>The path of the source file can't be known in general (because we could be parsing an arbitrary string, as we did above), so we
+pass it in ourselves.</li>
+<li><code>makeCoverageTrackingCall</code> just creates a call to <code>markExecuted</code>, with the filename and line number
+as arguments. Note that we insert the fully qualified name of <code>CoverageTracker</code> there instead of adding
+an import; this wards against the case where the subject code is already using the name <code>CoverageTracker</code>.</li>
+<li>The <code>visit</code> method runs whenever the traversal encounters an expression statement
+(for example, a standalone method call) and returns a block statement containing the original statement,
+followed by the call to <code>markExecuted</code>.</li>
+</ul>
+
+
+<p>We can equip this class with a <code>main</code> method similar to our previous examples:</p>
+
+<p>```java The main method.
+public static void main(String[] args) throws ParseException {
+  CompilationUnit unit = JavaParser.parse(new StringReader(new StringBuilder()</p>
+
+<pre><code>  .append("package io.badawi.hello;\n\n")
+  .append("public class Hello {\n")
+  .append("  public static void main(String[] args) {\n")
+  .append("    System.out.println(\"hello, world\");\n")
+  .append("  }\n")
+  .append("}\n").toString()));
+</code></pre>
+
+<p>  unit.accept(new CoverageVisitor("/path/to/Hello.java"), null);</p>
+
+<p>  System.out.println(unit.toString());
+}
+```</p>
+
+<p>Running this prints out</p>
+
+<p>```text The output.
+package io.badawi.hello;</p>
+
+<p>public class Hello {</p>
+
+<pre><code> public static void main(String[] args) {
+     {
+         System.out.println("hello, world");
+         io.badawi.coverage.runtime.CoverageTracker.markExecuted("/path/to/Hello.java", 5);
+     }
+ }
+</code></pre>
+
+<p>}</p>
+
+<p>```</p>
+
+<p>which is what we wanted.</p>
+
+<h2>Baseline coverage</h2>
+
+<p>Let's go back to our hello world example for a bit. Notice that even though there are seven
+lines in this file, we really only care about line 5. Line 5 is the only executable line;
+the rest are noise.  If line 5 is executed, logically we should say 100% of the class was covered
+(as opposed to 14.28%, or 1/7). It's not quite enough, then, to know that line
+5 was executed; to produce an accurate coverage report, we have
+to know also which lines <em>could</em> have been executed (in this case, only line 5).
+In doing this, we'll want to ignore things like package declarations, imports,
+blank lines, comments and so on.</p>
+
+<p>Given what we have so far, how do we do this? Which lines are executable?
+It should be easy enough to see that the executable lines are precisely those lines for which
+we've created a <code>markExecuted</code> call. We can reuse our <code>CoverageTracker</code> and just mark the line
+as executable at that point:</p>
+
+<p><code>java Keep track of executable lines.
+private Statement makeCoverageTrackingCall(String filename, int line) {
+  CoverageTracker.markExecutable(filename, line);
+  // same as before
+}
+</code></p>
+
+<p>where <code>markExecutable</code> is implemented the same way as <code>markExecuted</code>, only with <code>false</code>
+instead of <code>true</code>:</p>
+
+<p>```java Implementation of markExecutable.</p>
+
+<p>public static void markExecutable(String filename, int line) {
+  if (!coverage.contains(filename)) {</p>
+
+<pre><code>coverage.put(filename, new HashMap&lt;Integer, Boolean&gt;());
+</code></pre>
+
+<p>  }
+  coverage.get(filename).put(line, false);
+} <br/>
+```</p>
+
+<p>Then the coverage report will be generated via the same shutdown hook we added earlier (but
+at instrumentation time, not a runtime).</p>
+
+<h2>Generating a coverage report</h2>
+
+<p>We're going to generate our report in lcov format. This format is
+understood by tools like <code>lcov</code> and <code>genhtml</code>, which can use it to
+spit out a nice HTML report where the source code is annotated
+with colors that show which lines were executed.</p>
+
+<p>The format isn't very complicated. It consists of a series of records,
+one for each source file. Within each record, you specify which lines
+were executed. You can also specify things like function and branch
+coverage, but we won't use those features.</p>
+
+<p>An lcov record for our hello world example might look like</p>
+
+<p><code>text An lcov record.
+SF:/path/to/Hello.java
+DA:3,1
+end_of_record
+</code></p>
+
+<p>The <code>SF</code> line signals the start of a new record for the source file
+at the given path, and <code>end_of_record</code> (obviously) signals the end
+of the record. For each executable line, a <code>DA</code> line specifies the
+line number and the number of times that line was executed. In our case,
+since we're only tracking whether a line was executed and not how many
+times, we'll only ever put a 1 or 0 there. It wouldn't be difficult to
+change the <code>CoverageTracker</code> implements to keep a count, though.</p>
+
+<p>With that in mind, generating a coverage report is straightforward
+and looks like this.</p>
+
+<p>```java Generating the coverage report.
+private static void writeCoverageToFile() {
+  String lcovCoverage = generateLcov();
+  String coverageReportPath = System.getProperty("coverage.report.path", "coverage_report.lcov");
+  FileWriter writer = null;
+  try {</p>
+
+<pre><code>writer = new FileWriter(coverageReportPath);
+writer.write(lcovCoverage);
+</code></pre>
+
+<p>  } catch (IOException e) {</p>
+
+<pre><code>throw new RuntimeException(e);
+</code></pre>
+
+<p>  } finally {</p>
+
+<pre><code>try {
+  writer.close();
+} catch (IOException e) {
+  throw new RuntimeException(e);
+}
+</code></pre>
+
+<p>  }
+}</p>
+
+<p>private static String generateLcov() {
+  StringBuilder sb = new StringBuilder();
+  for (String filename : coverage.keySet()) {</p>
+
+<pre><code>sb.append("SF:" + filename + "\n");
+for (Map.Entry&lt;Integer, Boolean&gt; line : coverage.get(filename).entrySet()) {
+  sb.append(String.format("DA:%d,%d\n", line.getKey(), line.getValue() ? 1 : 0));
+}
+sb.append("end_of_record\n");
+</code></pre>
+
+<p>  }
+  return sb.toString();
+}
+```</p>
+
+<p>Note how we read the output path from the <code>coverage.report.path</code> property; this is
+useful since we generate two reports, one during instrumentation and one during
+execution.</p>
+
+<p>(<code>writeCoverageToFile</code> is a bit awkward, again because I don't want
+to use Guava in the runtime code. It could just be a call to
+<code>Files.write</code>).</p>
+
+<p>We're close to the payoff. We can change the <code>main</code> method of
+<code>CoverageVisitor</code> to take a class as a command line argument
+instead of hard coding in our <code>Hello</code> class. Since for now we're
+assuming a single input class, we'll just print the instrumented
+class to standard output and let the caller decide where to put it.</p>
+
+<p>```java A proper main method.
+public static void main(String[] args) throws IOException, ParseException {</p>
+
+<pre><code>File file = new File(args[0]);
+CompilationUnit unit = JavaParser.parse(new FileReader(file));
+unit.accept(new CoverageVisitor(file.getAbsolutePath()), null);
+System.out.println(unit.toString());
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Now we should be able to instrument, compile and execute a class,
+and use <code>genhtml</code> to visualize the resulting coverage report. The
+following assumes <code>CoverageVisitor</code> and <code>CoverageTracker</code> were compiled
+and the class files are in a directory called <code>bin</code>:</p>
+
+<p>```bash Putting it all together.
+$ pwd
+/Users/isbadawi/Documents/workspace/coverage-example
+$ cat Hello.java
+public class Hello {
+  public static void main(String[] args) {</p>
+
+<pre><code>System.out.println("hello, world");
+</code></pre>
+
+<p>  }
+}
+$ mkdir instrumented
+$ java -cp bin -Dcoverage.report.path=instrumented/baseline_coverage.lcov \</p>
+
+<pre><code>   io.badawi.coverage.CoverageVisitor Hello.java &gt; instrumented/Hello.java
+</code></pre>
+
+<p>$ cd instrumented
+$ cat baseline_coverage.lcov
+SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
+DA:3,0
+end_of_record    <br/>
+$ cat Hello.java
+public class Hello {</p>
+
+<pre><code>public static void main(String[] args) {
+    {
+        System.out.println("hello, world");
+        io.badawi.coverage.runtime.CoverageTracker.markExecuted("/Users/isbadawi/Documents/workspace/coverage-example/Hello.java", 3);
+    }
+}
+</code></pre>
+
+<p>}
+$ javac -cp .:../bin Hello.java &amp;&amp; java -cp .:../bin Hello
+hello, world
+$ cat coverage_report.lcov
+SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
+DA:3,1
+end_of_record
+$ lcov -a baseline_coverage.lcov -a coverage_report.lcov -o combined_coverage.lcov
+$ genhtml combined_coverage.lcov -o report
+$ cd report &amp;&amp; python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+```</p>
+
+<p>We use the <code>lcov</code> command to merge together our baseline and runtime coverage
+reports. (In this case, the runtime coverage report is enough, but in general
+this step is necessary). Then we feed the merged report to <code>genhtml</code>, which
+generates a little HTML report. <code>python -m SimpleHTTPServer</code> just serves up the
+contents of the current directory on port 8000. Pointing our browser to
+<code>localhost:8000</code> should then show a nice coverage report (which I've placed
+<a href="/coverage-report">here</a>).</p>
+
+<h2>Handling everything</h2>
+
+<p>Now that's we've got this running end-to-end as sort of proof of concept,
+we can go back and tie up some loose ends. <code>CoverageVisitor</code> only instruments
+expression statements, for simplicity and because that's the only kind of
+statement the hello world example contained. We'd like to extend our approach
+to handle everything.</p>
+
+<p>If we worked at level of statements, we'd need to write code to handle all the different
+kinds of statements -- if statements, for loops, while loops, throw statements,
+assert statements, and so on. For each of these we'd need to come up with a
+transformation that inserted coverage tracking calls in the right place. A simpler
+solution would be to work with expressions, and try to come up with a single transformation
+that works for all expressions.</p>
+
+<p>One idea would be to take our <code>markExecuted</code> method and have it take an expression
+as an argument and return its value, like this:</p>
+
+<p><code>java markExecuted as an expression
+public static &lt;T&gt; T markExecuted(String filename, int line, T expression) {
+  markExecuted(filename, line);
+  return expression;
+}
+</code></p>
+
+<p>Then you could essentially wrap expressions in a call to <code>markExecuted</code>; the
+expression would evaluate to the same value, and coverage would be tracked.
+For instance, this:</p>
+
+<p><code>java An if statement.
+if (1 &lt; 2) {
+  // ...
+}
+</code></p>
+
+<p>would become this:</p>
+
+<p><code>java The same if statement, instrumented.
+if (CoverageTracker.markExecuted(/* file */, /* line */, 1 &lt; 2)) {
+  // ...
+}
+</code></p>
+
+<p>and the same transformation would apply for loop conditions, assertions,
+and so on, without needing to write different cases for them.</p>
+
+<p>There is just a small issue, which is that this won't work if the
+expression has type <code>void</code>, since you can't pass
+something of type <code>void</code> to a method. This turns out not to be a huge deal; we don't need
+to perform any sort of type inference or anything like that. Expressions of type <code>void</code> can only
+occur in two places: expression statements (like our call to <code>System.out.println</code>),
+and for loop headers (in the initialization and increment sections). We can can just
+handle those two cases separately, and we'll be fine.</p>
+
+<p>We already took care of expression statements earlier, by inserting the coverage tracking
+call afterwards, as a separate statement. We can use the same sort of idea to take care
+of for loop headers. The initialization and increment sections include comma-separated
+lists of expressions; when considering expressions there, we can insert our coverage
+tracking call as the next element in the comma-separated list.</p>
+
+<p>This should be good. Conceptually, it's simpler than handling every statement separately.
+Unfortunately, the visitor machinery in javaparser doesn't seem to have a mechanism for
+writing a single method that handles all kinds of expressions. The ugly, clumsy way
+around this is to write a <code>visit</code> method for every different kind of expression, which
+looks like this:</p>
+
+<p>```java Instrumenting expressions.
+@Override
+public Node visit(ArrayAccessExpr n, Object arg) {
+  return makeCoverageTrackingCall(n);
+}</p>
+
+<p>@Override
+public Node visit(ArrayCreationExpr n, Object arg) {
+  return makeCoverageTrackingCall(n);
+}</p>
+
+<p>// 20-something identical cases
+```</p>
+
+<p>I don't really like this, but conceptually it's still simpler than handling statements
+separately. Even if we went the other way, we'd need to do this to properly handle assert and throw statements;
+we couldn't insert a statement after, since it might not be executed.</p>
+
+<h2>Where to go from here?</h2>
+
+<p>That covers pretty much everything. We've put together a simplistic line coverage tool for Java, which works
+by instrumenting Java code as a source-to-source transformation. The complete code can be found <a href="https://github.com/isbadawi/coverage-example">on github</a>.
+Some closing remarks:</p>
+
+<ul>
+<li>The most popular Java coverage tool is probably <a href="http://emma.sourceforge.net">Emma</a>. It works by instrumenting bytecode (.class files)
+instead of source code. This has a few advantages; for instance Emma provides a special classloader that can
+instrument code on the fly as it's loaded, which we can't really do with this approach. (The main benefit of this
+approach is that's fairly accessible, and can be explained without requiring knowledge of JVM bytecode).</li>
+<li>Not all coverage tools work this way; an interesting one to look at is <a href="http://nedbatchelder.com/code/coverage">coverage.py</a>, which is based
+on <a href="http://docs.python.org/2/library/sys.html#sys.settrace">a hook provided by the python interpreter</a>.</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+</feed>
