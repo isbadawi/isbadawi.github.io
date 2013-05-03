@@ -7,17 +7,16 @@ categories: [code, java, coverage]
 ---
  
 *Disclaimer: I'm not quite sure who the audience is for this. I guess it's
-describing a little weekend project I put together, but it's also written kind of
+describing a fun little project I put together, but it's also written kind of
 like a tutorial, so you can maybe follow along. I don't think it's particularly
 beginner-friendly, though. Some knowledge of Java is assumed, but not much.
 The code is available [on github](https://github.com/isbadawi/coverage-example).*
 
                                        
-Code coverage measures roughly how much, and which parts, of the source code
-of a program were exercised in a given execution of that program 
-(or more often, during the execution of a test suite for that
-program). There are many different flavors of coverage data, for example
-describing which lines were executed, which statements were executed, which
+Code coverage is a software metric that measures how much, and which parts, of the source code
+of a program were exercised in a given execution of that program.
+There are many different flavors of coverage data, for example
+tracking which lines or statements were executed, which
 functions were called, which branches or control flow paths were taken. In
 this post, we'll walk through writing a simplistic coverage collection tool
 for Java.
@@ -25,9 +24,9 @@ for Java.
 <!--more-->
 
 The typical way code coverage is measured is by taking the input program
-and rewriting it so that as it executes, it records somewhere which parts
-are executing. For simplicity, we'll focus on line coverage. For line
-coverage, the rewritten code might maintain a little table in memory, mapping
+and instrumenting it so that as it executes, it records somewhere which parts
+are executing. For simplicity, we'll focus on line coverage. In that case,
+the instrumented code might maintain a little table in memory, mapping
 file names and line numbers to booleans representing whether that line
 in that file has been executed. As each statement is executed, the appropriate
 entry in the table will be updated.
@@ -63,12 +62,12 @@ public class Hello {
 }
 ```
 
-Straightforward, right?  After a line executes, you mark it as executed.
-Then, before the program exits, you write out the coverage information somewhere.
-The rewriting process -- generating this code automatically -- might be a
+Straightforward, right?  After a line executes, we mark it as executed.
+Then, before the program exits, we write out the coverage information somewhere.
+Getting a coverage tool to generate this code automatically might be 
 bit involved, but conceptually what we're doing should be easy to understand.
 
-The implementation of `CoverageTracker` could be as simple as this.
+The implementation of `CoverageTracker` could be as simple as this:
 
 ```java The coverage tracker.
 package io.badawi.coverage.runtime;
@@ -93,9 +92,9 @@ public class CoverageTracker {
 }
 ```
  
-(Note that although we'll use Guava in other parts of the code,
+(n.b: although we'll use Guava in other parts of the code,
 `CoverageTracker` is used by the instrumented code, and it might be
-awkward to add a runtime dependency just to save a few lines of code.
+awkward to add a runtime dependency on Guava just to save a few lines of code here.
 This is why I'm using a `Map<String, Map<Integer, Boolean>>` instead
 of a `Table<String, Integer, Boolean>`).
 
@@ -118,17 +117,19 @@ static {
 Instrumenting code
 ------------------
 So far so good, but how do we actually do this rewriting automatically?
-We need a solution that will allow us to distinguish executable lines
-from noise lines, and let us insert those method calls at the right
-places.
+We need a solution that's allow us to insert method calls at the right
+place.
 
 The wrong way to do this is to use some complicated regex-based solution.
 The right way to do this is to parse the code, and work with an
 abstract syntax tree representation. That way, we can work at the level
 of statements and expressions, and not the level of lines in a file, so
-figuring out what's executable is trivial. To generate code, we can
-transform the abstract syntax tree as we see fit and then pretty-print it
-to a file.
+manipulating the program will be simpler. We can transform the syntax tree
+as we see fit and pretty-print (or unparse) it to get back corresponding
+source code.
+
+Aside: javaparser
+-----------------
 
 Writing a parser for a language like Java is way outside the scope of this
 blog post. Instead, we'll use a library. There are a few of these for most
@@ -137,9 +138,7 @@ grammar. I'm going to use [javaparser][javaparser], mostly for simplicity;
 it looks nice and standalone. The main downside is it only supports Java 1.5.
 The documentation is also kind of scarce.
 
-The hello world example for javaparser might look like this. It parses
-a class (given here as a string), then calls `toString()` on the resulting
-object to reconstruct a string out of it.
+The hello world example for javaparser might look like this:
 
 ```java Parse a class and pretty-print it using javaparser.
 package io.badawi.hello;
@@ -165,7 +164,10 @@ public class HelloJavaparser {
 }
 ```
 
-Running this just spits out the class declaration for `Hello`:
+It parses a source file (given here as a string), and gets at an object
+of type `CompilationUnit`, which is the root of the abstract syntax tree representation.
+Each node in the tree overrides `toString()` to do pretty-printing, so running this just
+spits out the class declaration for `Hello`:
 
 ```text The output.
 package io.badawi.hello;
@@ -178,11 +180,8 @@ public class Hello {
 }
 ```
 
-Going slightly further, we'll change this example to add a statement
-to the main method before getting the text back. We do this by creating
-the AST fragment corresponding to the call, getting at the AST node
-corresponding to the `main` method, and adding the newly constructed
-statement to its body. It looks like this:
+Going slightly further, we'll modify this example to add a statement
+to the main method before getting the text back. It looks like this:
 
 ```java Modify the class a bit before generating code.
 package io.badawi.hello;
@@ -214,6 +213,21 @@ public class HelloJavaparser {
 }
 ```
 
+By creating AST nodes and connecting them together, we can synthesize new code. Here,
+we create the `System.out.println("hello, javaparser")` method call by creating a
+`MethodCallExpr` node that has `System.out` as a receiver, `println` as the method name,
+and the string literal `"hello, javaparser"` as argument.
+
+Starting with the `CompilationUnit` object, we can navigate the code programmatically,
+and so get at the `MethodDeclaration` object corresponding to the `main` method; from
+there, we can get at the body, which is a `Block` object containing a list of statements,
+and add our newly created statement to it.
+
+(javaparser has this annoying thing where it initializes collections to `null` instead of using
+empty collections. The `ASTHelper.addStmt` method adds a statement to a block, making
+sure to create the list if it's null. Similarly `ASTHelper.addArgument` does the same for
+argument lists of method calls. These functions shouldn't be necessary but that's how the API is.)
+
 Running this spits out the following class:
 
 ```text The output.
@@ -230,13 +244,15 @@ public class Hello {
 
 which is what we wanted.
 
-Okay, so now we know how to parse a class, make modifications to it, and get
-back source code for the modified class. The last piece of the puzzle is
-traversing the AST. For this javaparser has the AST nodes implement
-[the Visitor pattern][visitor-wiki]; we can implement a Visitor interface that
-has methods for all the different nodes we're interested in, and all the AST nodes
-have an `accept` method that takes care of the dispatching. For example, we
-could replace the `System.out.println(unit.toString());` at the end of the last
+Okay, so now we know how to parse Java code and get an AST, how to unparse an AST and get back
+Java code, and the basics of how to synthesize new code and modify the AST. Now what we'll want
+to do is something like "for every statement, do X". 
+To achieve this, javaparser has the AST nodes implement [the Visitor pattern][visitor-wiki];
+this is nice because we don't have to manually traverse tree and do `instanceof` checks or whatever;
+we can just implement an interface that specifies what we want to do when we encounter each kind of node,
+and the visitor machinery will take care of traversing and dispatching.
+
+For example, we could replace the `System.out.println(unit.toString());` at the end of the last
 example with this:
 
 ```java Method call visitor.
@@ -247,35 +263,42 @@ unit.accept(new VoidVisitorAdapter<Object>() {
 }, null);
 ```
 
-and the output would be
+`accept` takes care of traversing the AST, 
+the given visitor. Here, we just pretty-print every method call we
+see, so the output is:
 
 ```text The output.
 found method call: System.out.println("hello, world")
 found method call: System.out.println("hello, javaparser")
 ```
 
-(All the `Visitor` classes have a generic type parameter; each `visit` method
+(n.b. All the `Visitor` classes have a generic type parameter; each `visit` method
 takes an extra argument of that type, and the `accept` method also takes
-a value of that type. I guess this can be useful to pass around state that is
+a value of that type and passes it around everywhere.
+I guess this can be useful to pass around state that is
 built up during the traversal, but for complicated visitors I tend to use
 a proper, non-anonymous class, and use member variables to keep state. So
 here and in what follows I'll always use `Object` as the type parameter, pass
-in `null` to `accept`, and ignore the extra argument.)
+in `null` to `accept`, and ignore the extra argument to the `visit` methods.)
 
-Now what we're looking to do is traverse the tree, find all the executable
-statements and expressions, and insert our coverage tracking statements
-after them.
+Back to instrumentation
+-----------------------
+
+Now what we're looking to do is traverse the tree, find all the statements,
+and insert our coverage tracking statements after them. (To start with, we'll
+only handle expression statements, since that's the only kind of statement that
+appears in the hello world example.)
 
 This isn't as straightforward as it sounds, because if we do this naively
--- given a node in the tree, walk up its parents to find the statement
+-- given a statement in the tree, walk up the tree to find the statement
 list containing it, and insert our coverage tracking statement after it
 -- we'd be modifying lists of statements as we're iterating over them, which
 causes trouble.
 
-Javaparser already contains infrastructure to modify ASTs, in the form of a special
+javaparser already contains infrastructure to modify ASTs, in the form of a special
 visitor implementation called `ModifierVisitorAdapter`, which has each `visit`
-method return a `Node` to serve as the replacement for the current node. So we can replace an
-arbitrary node with another. We can also use this to emulate inserting a statement
+method return an AST node to serve as the replacement for the current node. So we can replace an
+arbitrary node with another. We can use this facility to emulate inserting a statement
 after the current statement; just replace the statement with a block statement
 containing it and its new successor.
 
@@ -625,5 +648,23 @@ I don't really like this, but conceptually it's still simpler than handling stat
 separately. Even if we went the other way, we'd need to do this to properly handle assert and throw statements;
 we couldn't insert a statement after, since it might not be executed.
 
+Where to go from here?
+----------------------
+
+That covers pretty much everything. We've put together a simplistic line coverage tool for Java, which works
+by instrumenting Java code as a source-to-source transformation. Some closing remarks:
+
+* This post is partly based on my intern project at Google in summer of 2012, where I added support for
+collecting code coverage information from browser-based tests in Google Web Toolkit applications.
+* The most popular Java coverage tool is probably [Emma][emma]. It works by instrumenting bytecode (.class files)
+instead of source code. This has a few advantages; for instance Emma provides a special classloader that can
+instrument code on the fly as it's loaded, which we can't really do with this approach. (The main benefit of this
+approach is that's fairly accessible, and can be explained without requiring knowledge of JVM bytecode).
+* Not all coverage tools work this way; an interesting one to look at is [coverage.py][coverage-py], which is based
+on [a hook provided by the python interpreter][settrace].
+
 [javaparser]: https://github.com/matozoid/javaparser
 [visitor-wiki]: http://en.wikipedia.org/wiki/Visitor_pattern
+[emma]: http://emma.sourceforge.net
+[coverage-py]: http://nedbatchelder.com/code/coverage
+[settrace]: http://docs.python.org/2/library/sys.html#sys.settrace
