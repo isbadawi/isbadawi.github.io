@@ -248,7 +248,7 @@ Okay, so now we know how to parse Java code and get an AST, how to unparse an AS
 Java code, and the basics of how to synthesize new code and modify the AST. Now what we'll want
 to do is something like "for every statement, do X". 
 To achieve this, javaparser has the AST nodes implement [the Visitor pattern][visitor-wiki];
-this is nice because we don't have to manually traverse tree and do `instanceof` checks or whatever;
+this is nice because we don't have to manually traverse the tree and do `instanceof` checks or whatever;
 we can just implement an interface that specifies what we want to do when we encounter each kind of node,
 and the visitor machinery will take care of traversing and dispatching.
 
