@@ -4,7 +4,7 @@
   <title><![CDATA[Category: code | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/code/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2013-05-03T19:41:48-04:00</updated>
+  <updated>2013-05-03T21:09:57-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -82,7 +82,7 @@ CoverageTracker.writeCoverageToFile();
 
 <p>Straightforward, right?  After a line executes, we mark it as executed.
 Then, before the program exits, we write out the coverage information somewhere.
-Getting a coverage tool to generate this code automatically might be
+Getting a coverage tool to generate this code automatically might be a
 bit involved, but conceptually what we're doing should be easy to understand.</p>
 
 <p>The implementation of <code>CoverageTracker</code> could be as simple as this:</p>
@@ -143,7 +143,7 @@ static {
 <h2>Instrumenting code</h2>
 
 <p>So far so good, but how do we actually do this rewriting automatically?
-We need a solution that's allow us to insert method calls at the right
+We need a solution that allows us to insert method calls at the right
 place.</p>
 
 <p>The wrong way to do this is to use some complicated regex-based solution.
