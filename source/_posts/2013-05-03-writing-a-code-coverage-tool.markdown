@@ -64,7 +64,7 @@ public class Hello {
 
 Straightforward, right?  After a line executes, we mark it as executed.
 Then, before the program exits, we write out the coverage information somewhere.
-Getting a coverage tool to generate this code automatically might be 
+Getting a coverage tool to generate this code automatically might be a
 bit involved, but conceptually what we're doing should be easy to understand.
 
 The implementation of `CoverageTracker` could be as simple as this:
@@ -117,7 +117,7 @@ static {
 Instrumenting code
 ------------------
 So far so good, but how do we actually do this rewriting automatically?
-We need a solution that's allow us to insert method calls at the right
+We need a solution that allows us to insert method calls at the right
 place.
 
 The wrong way to do this is to use some complicated regex-based solution.
