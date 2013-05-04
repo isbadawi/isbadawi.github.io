@@ -4,7 +4,7 @@
   <title><![CDATA[Category: java | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/java/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2013-05-03T21:09:57-04:00</updated>
+  <updated>2013-05-03T21:21:17-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -283,7 +283,7 @@ package io.badawi.hello;</p>
 Java code, and the basics of how to synthesize new code and modify the AST. Now what we'll want
 to do is something like "for every statement, do X".
 To achieve this, javaparser has the AST nodes implement <a href="http://en.wikipedia.org/wiki/Visitor_pattern">the Visitor pattern</a>;
-this is nice because we don't have to manually traverse tree and do <code>instanceof</code> checks or whatever;
+this is nice because we don't have to manually traverse the tree and do <code>instanceof</code> checks or whatever;
 we can just implement an interface that specifies what we want to do when we encounter each kind of node,
 and the visitor machinery will take care of traversing and dispatching.</p>
 
