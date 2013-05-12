@@ -4,7 +4,7 @@
   <title><![CDATA[Category: code | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/code/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2013-05-03T21:21:17-04:00</updated>
+  <updated>2013-05-12T15:31:12-07:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Writing a code coverage tool]]></title>
     <link href="http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool/"/>
-    <updated>2013-05-03T00:00:00-04:00</updated>
+    <updated>2013-05-03T00:00:00-07:00</updated>
     <id>http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool</id>
     <content type="html"><![CDATA[<p><em>Disclaimer: I'm not quite sure who the audience is for this. I guess it's
 describing a fun little project I put together, but it's also written kind of
