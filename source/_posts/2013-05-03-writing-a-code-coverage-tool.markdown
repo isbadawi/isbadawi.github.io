@@ -33,7 +33,7 @@ entry in the table will be updated.
 
 Here's a simple example, the standard hello world in Java:
 
-```java An contrived example class.
+```java A contrived example class.
 package io.badawi.hello;
 
 public class Hello {
