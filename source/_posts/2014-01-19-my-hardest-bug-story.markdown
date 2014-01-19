@@ -38,7 +38,7 @@ relevant bit looked something like this:
 @Test
 public void testAllOptionsAreVisible() {
     ImmutableSet<Option> visibleOptions = methodContainingApplicationLogic();
-    assertEquals(visibleOptions, ImmutableSet.of(Option.values()));
+    assertEquals(ImmutableSet.of(Option.values()), visibleOptions);
 }
 ```
 
@@ -51,11 +51,11 @@ the set built up by the test's setup logic.
 Digging through the error logs of the coverage run, the error looked liked this:
 
 ```
-java.lang.AssertionError: expected:<[Lcom.google.ads.whatever.Option;@deadbeef]> but was:<[FOO, BAR, BAZ]>
+java.lang.AssertionError: expected:<[Lcom.google.ads.whatever.Option;@12345678> but was:<[FOO, BAR, BAZ]>
        at OptionsPageTest.testAllOptionsAreVisible(OptionsPageTest.java:42]
 ```
 
-If you're a Java person, the problem is fairly obvious; the thing on the left (corresponding to the second argument
+If you're a Java person, the problem is fairly obvious; the thing on the left (corresponding to the first argument
 to `assertEquals`) is an `ImmutableSet<Option[]>` containing the result of calling `values()`,
 instead of an `ImmutableSet<Option>` containing a copy of the array. If you look at the docs linked above,
 you'll notice that `ImmutableSet` doesn't actually have
