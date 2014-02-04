@@ -2,18 +2,22 @@
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
         <loc>http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool/</loc>
-        <lastmod>2013-09-29T22:14:19-04:00</lastmod>
+        <lastmod>2013-10-30T20:11:51-04:00</lastmod>
+    </url>
+    <url>
+        <loc>http://ismail.badawi.io/blog/2014/02/04/an-obscure-bug-story/</loc>
+        <lastmod>2014-02-04T16:45:03-05:00</lastmod>
     </url>
     <url>
         <loc>http://ismail.badawi.io/blog/archives/</loc>
-        <lastmod>2013-09-29T22:14:19-04:00</lastmod>
+        <lastmod>2014-02-04T16:45:03-05:00</lastmod>
     </url>
     <url>
         <loc>http://ismail.badawi.io/</loc>
-        <lastmod>2013-09-29T22:14:19-04:00</lastmod>
+        <lastmod>2014-02-04T16:45:03-05:00</lastmod>
     </url>
     <url>
         <loc>http://ismail.badawi.io/robots.txt</loc>
-        <lastmod>2013-04-16T22:06:38-04:00</lastmod>
+        <lastmod>2013-10-30T20:11:51-04:00</lastmod>
     </url>
 </urlset>

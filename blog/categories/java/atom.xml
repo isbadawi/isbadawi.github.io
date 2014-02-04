@@ -4,7 +4,7 @@
   <title><![CDATA[Category: java | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/java/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2013-09-29T22:14:33-04:00</updated>
+  <updated>2014-02-04T16:45:41-05:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -18,9 +18,9 @@
     <link href="http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool/"/>
     <updated>2013-05-03T00:00:00-04:00</updated>
     <id>http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool</id>
-    <content type="html"><![CDATA[<p><em>Disclaimer: I'm not quite sure who the audience is for this. I guess it's
-describing a fun little project I put together, but it's also written kind of
-like a tutorial, so you can maybe follow along. I don't think it's particularly
+    <content type="html"><![CDATA[<p><em>Disclaimer: I&rsquo;m not quite sure who the audience is for this. I guess it&rsquo;s
+describing a fun little project I put together, but it&rsquo;s also written kind of
+like a tutorial, so you can maybe follow along. I don&rsquo;t think it&rsquo;s particularly
 beginner-friendly, though. Some knowledge of Java is assumed, but not much.
 The code is available <a href="https://github.com/isbadawi/coverage-example">on github</a>.</em></p>
 
@@ -29,7 +29,7 @@ of a program were exercised in a given execution of that program.
 There are many different flavors of coverage data, for example
 tracking which lines or statements were executed, which
 functions were called, which branches or control flow paths were taken. In
-this post, we'll walk through writing a simplistic coverage collection tool
+this post, we&rsquo;ll walk through writing a simplistic coverage collection tool
 for Java.</p>
 
 <!--more-->
@@ -37,13 +37,13 @@ for Java.</p>
 
 <p>The typical way code coverage is measured is by taking the input program
 and instrumenting it so that as it executes, it records somewhere which parts
-are executing. For simplicity, we'll focus on line coverage. In that case,
+are executing. For simplicity, we&rsquo;ll focus on line coverage. In that case,
 the instrumented code might maintain a little table in memory, mapping
 file names and line numbers to booleans representing whether that line
 in that file has been executed. As each statement is executed, the appropriate
 entry in the table will be updated.</p>
 
-<p>Here's a simple example, the standard hello world in Java:</p>
+<p>Here&rsquo;s a simple example, the standard hello world in Java:</p>
 
 <p>```java A contrived example class.
 package io.badawi.hello;</p>
@@ -58,7 +58,7 @@ package io.badawi.hello;</p>
 }
 ```</p>
 
-<p>We'd like to rewrite this so that after it's done executing, it will have
+<p>We&rsquo;d like to rewrite this so that after it&rsquo;s done executing, it will have
 produced a little coverage report in a text file, saying that line 5 was
 executed. The rewritten class might look like this:</p>
 
@@ -83,7 +83,7 @@ CoverageTracker.writeCoverageToFile();
 <p>Straightforward, right?  After a line executes, we mark it as executed.
 Then, before the program exits, we write out the coverage information somewhere.
 Getting a coverage tool to generate this code automatically might be a
-bit involved, but conceptually what we're doing should be easy to understand.</p>
+bit involved, but conceptually what we&rsquo;re doing should be easy to understand.</p>
 
 <p>The implementation of <code>CoverageTracker</code> could be as simple as this:</p>
 
@@ -100,7 +100,7 @@ import java.util.HashMap;</p>
 <pre><code>  new HashMap&lt;String, Map&lt;Integer, Boolean&gt;&gt;();
 </code></pre>
 
-<p>  // Serializes coverage in some format; we'll revisit this.
+<p>  // Serializes coverage in some format; we&rsquo;ll revisit this.
   public static void writeCoverageToFile() { }</p>
 
 <p>  public static void markExecuted(String filename, int line) {</p>
@@ -115,14 +115,14 @@ coverage.get(filename).put(line, true);
 }
 ```</p>
 
-<p>(n.b: although we'll use Guava in other parts of the code,
+<p>(n.b: although we&rsquo;ll use Guava in other parts of the code,
 <code>CoverageTracker</code> is used by the instrumented code, and it might be
 awkward to add a runtime dependency on Guava just to save a few lines of code here.
-This is why I'm using a <code>Map&lt;String, Map&lt;Integer, Boolean&gt;&gt;</code> instead
+This is why I&rsquo;m using a <code>Map&lt;String, Map&lt;Integer, Boolean&gt;&gt;</code> instead
 of a <code>Table&lt;String, Integer, Boolean&gt;</code>).</p>
 
-<p>There is just a slight problem. In general, we can't really know ahead of time when or where
-a program will terminate, so it won't do to just call <code>writeCoverageToFile</code> at the end of
+<p>There is just a slight problem. In general, we can&rsquo;t really know ahead of time when or where
+a program will terminate, so it won&rsquo;t do to just call <code>writeCoverageToFile</code> at the end of
 <code>main</code>. The easiest way to ensure the coverage report is always generated to put the
 call to <code>writeCoverageToFile</code> inside a JVM shutdown hook, so we can add this static initializer
 block to <code>CoverageTracker</code>, and drop the calls in the instrumented code:</p>
@@ -157,9 +157,9 @@ source code.</p>
 <h2>Aside: javaparser</h2>
 
 <p>Writing a parser for a language like Java is way outside the scope of this
-blog post. Instead, we'll use a library. There are a few of these for most
+blog post. Instead, we&rsquo;ll use a library. There are a few of these for most
 languages; if not, you can probably find a parser generator and a complete
-grammar. I'm going to use <a href="https://github.com/matozoid/javaparser">javaparser</a>, mostly for simplicity;
+grammar. I&rsquo;m going to use <a href="https://github.com/matozoid/javaparser">javaparser</a>, mostly for simplicity;
 it looks nice and standalone. The main downside is it only supports Java 1.5.
 The documentation is also kind of scarce.</p>
 
@@ -210,7 +210,7 @@ package io.badawi.hello;</p>
 <p>}
 ```</p>
 
-<p>Going slightly further, we'll modify this example to add a statement
+<p>Going slightly further, we&rsquo;ll modify this example to add a statement
 to the main method before getting the text back. It looks like this:</p>
 
 <p>```java Modify the class a bit before generating code.
@@ -258,8 +258,8 @@ and add our newly created statement to it.</p>
 
 <p>(javaparser has this annoying thing where it initializes collections to <code>null</code> instead of using
 empty collections. The <code>ASTHelper.addStmt</code> method adds a statement to a block, making
-sure to create the list if it's null. Similarly <code>ASTHelper.addArgument</code> does the same for
-argument lists of method calls. These functions shouldn't be necessary but that's how the API is.)</p>
+sure to create the list if it&rsquo;s null. Similarly <code>ASTHelper.addArgument</code> does the same for
+argument lists of method calls. These functions shouldn&rsquo;t be necessary but that&rsquo;s how the API is.)</p>
 
 <p>Running this spits out the following class:</p>
 
@@ -280,10 +280,10 @@ package io.badawi.hello;</p>
 <p>which is what we wanted.</p>
 
 <p>Okay, so now we know how to parse Java code and get an AST, how to unparse an AST and get back
-Java code, and the basics of how to synthesize new code and modify the AST. Now what we'll want
-to do is something like "for every statement, do X".
+Java code, and the basics of how to synthesize new code and modify the AST. Now what we&rsquo;ll want
+to do is something like &ldquo;for every statement, do X&rdquo;.
 To achieve this, javaparser has the AST nodes implement <a href="http://en.wikipedia.org/wiki/Visitor_pattern">the Visitor pattern</a>;
-this is nice because we don't have to manually traverse the tree and do <code>instanceof</code> checks or whatever;
+this is nice because we don&rsquo;t have to manually traverse the tree and do <code>instanceof</code> checks or whatever;
 we can just implement an interface that specifies what we want to do when we encounter each kind of node,
 and the visitor machinery will take care of traversing and dispatching.</p>
 
@@ -316,20 +316,20 @@ a value of that type and passes it around everywhere.
 I guess this can be useful to pass around state that is
 built up during the traversal, but for complicated visitors I tend to use
 a proper, non-anonymous class, and use member variables to keep state. So
-here and in what follows I'll always use <code>Object</code> as the type parameter, pass
+here and in what follows I&rsquo;ll always use <code>Object</code> as the type parameter, pass
 in <code>null</code> to <code>accept</code>, and ignore the extra argument to the <code>visit</code> methods.)</p>
 
 <h2>Back to instrumentation</h2>
 
-<p>Now what we're looking to do is traverse the tree, find all the statements,
-and insert our coverage tracking statements after them. (To start with, we'll
-only handle expression statements, since that's the only kind of statement that
+<p>Now what we&rsquo;re looking to do is traverse the tree, find all the statements,
+and insert our coverage tracking statements after them. (To start with, we&rsquo;ll
+only handle expression statements, since that&rsquo;s the only kind of statement that
 appears in the hello world example.)</p>
 
-<p>This isn't as straightforward as it sounds, because if we do this naively
--- given a statement in the tree, walk up the tree to find the statement
+<p>This isn&rsquo;t as straightforward as it sounds, because if we do this naively
+&mdash; given a statement in the tree, walk up the tree to find the statement
 list containing it, and insert our coverage tracking statement after it
--- we'd be modifying lists of statements as we're iterating over them, which
+&mdash; we&rsquo;d be modifying lists of statements as we&rsquo;re iterating over them, which
 causes trouble.</p>
 
 <p>javaparser already contains infrastructure to modify ASTs, in the form of a special
@@ -339,7 +339,7 @@ arbitrary node with another. We can use this facility to emulate inserting a sta
 after the current statement; just replace the statement with a block statement
 containing it and its new successor.</p>
 
-<p>Given this, here's a first go at instrumenting our hello world example:</p>
+<p>Given this, here&rsquo;s a first go at instrumenting our hello world example:</p>
 
 <p>```java A first go at instrumenting code.
 package io.badawi.coverage;</p>
@@ -347,7 +347,7 @@ package io.badawi.coverage;</p>
 <p>// snip imports</p>
 
 <p>public class CoverageVisitor extends ModifierVisitorAdapter<Object> {
-  // AST nodes don't know which file they come from, so we'll pass the information in
+  // AST nodes don&rsquo;t know which file they come from, so we&rsquo;ll pass the information in
   private String filename;</p>
 
 <p>  public CoverageVisitor(String filename) {</p>
@@ -385,7 +385,7 @@ return new ExpressionStmt(call);
 <li>The key point here is that parsers retain information about the positions (line and column offsets)
 of AST nodes, typically to generate useful error messages. The call to <code>node.getBeginLine()</code> returns
 the line in the file where the code fragment corresponding to that node begins.</li>
-<li>The path of the source file can't be known in general (because we could be parsing an arbitrary string, as we did above), so we
+<li>The path of the source file can&rsquo;t be known in general (because we could be parsing an arbitrary string, as we did above), so we
 pass it in ourselves.</li>
 <li><code>makeCoverageTrackingCall</code> just creates a call to <code>markExecuted</code>, with the filename and line number
 as arguments. Note that we insert the fully qualified name of <code>CoverageTracker</code> there instead of adding
@@ -410,7 +410,7 @@ public static void main(String[] args) throws ParseException {
   .append("}\n").toString()));
 </code></pre>
 
-<p>  unit.accept(new CoverageVisitor("/path/to/Hello.java"), null);</p>
+<p>  unit.accept(new CoverageVisitor(&ldquo;/path/to/Hello.java&rdquo;), null);</p>
 
 <p>  System.out.println(unit.toString());
 }
@@ -439,18 +439,18 @@ package io.badawi.hello;</p>
 
 <h2>Baseline coverage</h2>
 
-<p>Let's go back to our hello world example for a bit. Notice that even though there are seven
+<p>Let&rsquo;s go back to our hello world example for a bit. Notice that even though there are seven
 lines in this file, we really only care about line 5. Line 5 is the only executable line;
 the rest are noise.  If line 5 is executed, logically we should say 100% of the class was covered
-(as opposed to 14.28%, or 1/7). It's not quite enough, then, to know that line
+(as opposed to 14.28%, or 1/7). It&rsquo;s not quite enough, then, to know that line
 5 was executed; to produce an accurate coverage report, we have
 to know also which lines <em>could</em> have been executed (in this case, only line 5).
-In doing this, we'll want to ignore things like package declarations, imports,
+In doing this, we&rsquo;ll want to ignore things like package declarations, imports,
 blank lines, comments and so on.</p>
 
 <p>Given what we have so far, how do we do this? Which lines are executable?
 It should be easy enough to see that the executable lines are precisely those lines for which
-we've created a <code>markExecuted</code> call. We can reuse our <code>CoverageTracker</code> and just mark the line
+we&rsquo;ve created a <code>markExecuted</code> call. We can reuse our <code>CoverageTracker</code> and just mark the line
 as executable at that point:</p>
 
 <p><code>java Keep track of executable lines.
@@ -481,15 +481,15 @@ at instrumentation time, not a runtime).</p>
 
 <h2>Generating a coverage report</h2>
 
-<p>We're going to generate our report in lcov format. This format is
+<p>We&rsquo;re going to generate our report in lcov format. This format is
 understood by tools like <code>lcov</code> and <code>genhtml</code>, which can use it to
 spit out a nice HTML report where the source code is annotated
 with colors that show which lines were executed.</p>
 
-<p>The format isn't very complicated. It consists of a series of records,
+<p>The format isn&rsquo;t very complicated. It consists of a series of records,
 one for each source file. Within each record, you specify which lines
 were executed. You can also specify things like function and branch
-coverage, but we won't use those features.</p>
+coverage, but we won&rsquo;t use those features.</p>
 
 <p>An lcov record for our hello world example might look like</p>
 
@@ -503,8 +503,8 @@ end_of_record
 at the given path, and <code>end_of_record</code> (obviously) signals the end
 of the record. For each executable line, a <code>DA</code> line specifies the
 line number and the number of times that line was executed. In our case,
-since we're only tracking whether a line was executed and not how many
-times, we'll only ever put a 1 or 0 there. It wouldn't be difficult to
+since we&rsquo;re only tracking whether a line was executed and not how many
+times, we&rsquo;ll only ever put a 1 or 0 there. It wouldn&rsquo;t be difficult to
 change the <code>CoverageTracker</code> implements to keep a count, though.</p>
 
 <p>With that in mind, generating a coverage report is straightforward
@@ -513,7 +513,7 @@ and looks like this.</p>
 <p>```java Generating the coverage report.
 private static void writeCoverageToFile() {
   String lcovCoverage = generateLcov();
-  String coverageReportPath = System.getProperty("coverage.report.path", "coverage_report.lcov");
+  String coverageReportPath = System.getProperty(&ldquo;coverage.report.path&rdquo;, &ldquo;coverage_report.lcov&rdquo;);
   FileWriter writer = null;
   try {</p>
 
@@ -558,14 +558,14 @@ sb.append("end_of_record\n");
 useful since we generate two reports, one during instrumentation and one during
 execution.</p>
 
-<p>(<code>writeCoverageToFile</code> is a bit awkward, again because I don't want
+<p>(<code>writeCoverageToFile</code> is a bit awkward, again because I don&rsquo;t want
 to use Guava in the runtime code. It could just be a call to
 <code>Files.write</code>).</p>
 
-<p>We're close to the payoff. We can change the <code>main</code> method of
+<p>We&rsquo;re close to the payoff. We can change the <code>main</code> method of
 <code>CoverageVisitor</code> to take a class as a command line argument
-instead of hard coding in our <code>Hello</code> class. Since for now we're
-assuming a single input class, we'll just print the instrumented
+instead of hard coding in our <code>Hello</code> class. Since for now we&rsquo;re
+assuming a single input class, we&rsquo;ll just print the instrumented
 class to standard output and let the caller decide where to put it.</p>
 
 <p>```java A proper main method.
@@ -629,7 +629,7 @@ end_of_record
 $ lcov -a baseline_coverage.lcov -a coverage_report.lcov -o combined_coverage.lcov
 $ genhtml combined_coverage.lcov -o report
 $ cd report &amp;&amp; python -m SimpleHTTPServer
-Serving HTTP on 0.0.0.0 port 8000 ...
+Serving HTTP on 0.0.0.0 port 8000 &hellip;
 ```</p>
 
 <p>We use the <code>lcov</code> command to merge together our baseline and runtime coverage
@@ -637,20 +637,20 @@ reports. (In this case, the runtime coverage report is enough, but in general
 this step is necessary). Then we feed the merged report to <code>genhtml</code>, which
 generates a little HTML report. <code>python -m SimpleHTTPServer</code> just serves up the
 contents of the current directory on port 8000. Pointing our browser to
-<code>localhost:8000</code> should then show a nice coverage report (which I've placed
+<code>localhost:8000</code> should then show a nice coverage report (which I&rsquo;ve placed
 <a href="/coverage-report">here</a>).</p>
 
 <h2>Handling everything</h2>
 
-<p>Now that's we've got this running end-to-end as sort of proof of concept,
+<p>Now that&rsquo;s we&rsquo;ve got this running end-to-end as sort of proof of concept,
 we can go back and tie up some loose ends. <code>CoverageVisitor</code> only instruments
-expression statements, for simplicity and because that's the only kind of
-statement the hello world example contained. We'd like to extend our approach
+expression statements, for simplicity and because that&rsquo;s the only kind of
+statement the hello world example contained. We&rsquo;d like to extend our approach
 to handle everything.</p>
 
-<p>If we worked at level of statements, we'd need to write code to handle all the different
-kinds of statements -- if statements, for loops, while loops, throw statements,
-assert statements, and so on. For each of these we'd need to come up with a
+<p>If we worked at level of statements, we&rsquo;d need to write code to handle all the different
+kinds of statements &mdash; if statements, for loops, while loops, throw statements,
+assert statements, and so on. For each of these we&rsquo;d need to come up with a
 transformation that inserted coverage tracking calls in the right place. A simpler
 solution would be to work with expressions, and try to come up with a single transformation
 that works for all expressions.</p>
@@ -686,13 +686,13 @@ if (CoverageTracker.markExecuted(/* file */, /* line */, 1 &lt; 2)) {
 <p>and the same transformation would apply for loop conditions, assertions,
 and so on, without needing to write different cases for them.</p>
 
-<p>There is just a small issue, which is that this won't work if the
-expression has type <code>void</code>, since you can't pass
-something of type <code>void</code> to a method. This turns out not to be a huge deal; we don't need
+<p>There is just a small issue, which is that this won&rsquo;t work if the
+expression has type <code>void</code>, since you can&rsquo;t pass
+something of type <code>void</code> to a method. This turns out not to be a huge deal; we don&rsquo;t need
 to perform any sort of type inference or anything like that. Expressions of type <code>void</code> can only
 occur in two places: expression statements (like our call to <code>System.out.println</code>),
 and for loop headers (in the initialization and increment sections). We can can just
-handle those two cases separately, and we'll be fine.</p>
+handle those two cases separately, and we&rsquo;ll be fine.</p>
 
 <p>We already took care of expression statements earlier, by inserting the coverage tracking
 call afterwards, as a separate statement. We can use the same sort of idea to take care
@@ -700,8 +700,8 @@ of for loop headers. The initialization and increment sections include comma-sep
 lists of expressions; when considering expressions there, we can insert our coverage
 tracking call as the next element in the comma-separated list.</p>
 
-<p>This should be good. Conceptually, it's simpler than handling every statement separately.
-Unfortunately, the visitor machinery in javaparser doesn't seem to have a mechanism for
+<p>This should be good. Conceptually, it&rsquo;s simpler than handling every statement separately.
+Unfortunately, the visitor machinery in javaparser doesn&rsquo;t seem to have a mechanism for
 writing a single method that handles all kinds of expressions. The ugly, clumsy way
 around this is to write a <code>visit</code> method for every different kind of expression, which
 looks like this:</p>
@@ -720,21 +720,21 @@ public Node visit(ArrayCreationExpr n, Object arg) {
 <p>// 20-something identical cases
 ```</p>
 
-<p>I don't really like this, but conceptually it's still simpler than handling statements
-separately. Even if we went the other way, we'd need to do this to properly handle assert and throw statements;
-we couldn't insert a statement after, since it might not be executed.</p>
+<p>I don&rsquo;t really like this, but conceptually it&rsquo;s still simpler than handling statements
+separately. Even if we went the other way, we&rsquo;d need to do this to properly handle assert and throw statements;
+we couldn&rsquo;t insert a statement after, since it might not be executed.</p>
 
 <h2>Where to go from here?</h2>
 
-<p>That covers pretty much everything. We've put together a simplistic line coverage tool for Java, which works
+<p>That covers pretty much everything. We&rsquo;ve put together a simplistic line coverage tool for Java, which works
 by instrumenting Java code as a source-to-source transformation. The complete code can be found <a href="https://github.com/isbadawi/coverage-example">on github</a>.
 Some closing remarks:</p>
 
 <ul>
 <li>The most popular Java coverage tool is probably <a href="http://emma.sourceforge.net">Emma</a>. It works by instrumenting bytecode (.class files)
 instead of source code. This has a few advantages; for instance Emma provides a special classloader that can
-instrument code on the fly as it's loaded, which we can't really do with this approach. (The main benefit of this
-approach is that's fairly accessible, and can be explained without requiring knowledge of JVM bytecode).</li>
+instrument code on the fly as it&rsquo;s loaded, which we can&rsquo;t really do with this approach. (The main benefit of this
+approach is that&rsquo;s fairly accessible, and can be explained without requiring knowledge of JVM bytecode).</li>
 <li>Not all coverage tools work this way; an interesting one to look at is <a href="http://nedbatchelder.com/code/coverage">coverage.py</a>, which is based
 on <a href="http://docs.python.org/2/library/sys.html#sys.settrace">a hook provided by the python interpreter</a>.</li>
 </ul>

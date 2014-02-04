@@ -1,0 +1,345 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>An obscure bug story - Ismail Badawi</title>
+  <meta name="author" content="Ismail Badawi">
+
+  
+  <meta name="description" content="It&rsquo;s common to be asked a question like &ldquo;what&rsquo;s the hardest bug you&rsquo;ve debugged?&rdquo;
+at job interviews in tech. This post &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://ismail.badawi.io/blog/2014/02/04/an-obscure-bug-story">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ismail Badawi" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-40856767-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ismail Badawi</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:ismail.badawi.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">An Obscure Bug Story</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-04T02:03:00-05:00" pubdate data-updated="true">Feb 4<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>It&rsquo;s common to be asked a question like &ldquo;what&rsquo;s the hardest bug you&rsquo;ve debugged?&rdquo;
+at job interviews in tech. This post is about the bug I usually describe.
+The snag is that it&rsquo;s quite involved and I don&rsquo;t actually understand it all the
+way through &mdash; there are one or two aspects to it I often hand-wavingly gloss over.
+The hope was that by writing it out and fact checking it I&rsquo;d have a better handle
+on it; this is what came out.</p>
+
+<!--more-->
+
+
+<p>This came up during my first internship at Google in 2012. I was on a team in
+Ads, but I was mostly working on Google Web Toolkit, which was what many Ads
+applications were written in. My project was to add support in the GWT compiler
+for measuring code coverage from browser automation tests using WebDriver. This
+has nothing to with the bug except that it also involved coverage runs and because
+I had been messing with coverage stuff I&rsquo;d been cc&rsquo;d on the bug tracker and decided
+to look into it.</p>
+
+<p>The bug manifested like this. There was a team in Ads that had a GWT application
+and a whole bunch of tests written against it. A single one of these tests had a
+strange property: it would pass during regular test runs, but it would fail during
+coverage runs. (In particular, there was an automatic nightly coverage run which
+always showed up as failing because of this.)</p>
+
+<p>So this was weird &mdash; why would running a test for coverage change its outcome?</p>
+
+<p>I don&rsquo;t remember what the test was actually testing, but modulo identifiers the
+relevant bit looked something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="nd">@Test</span>
+</span><span class='line'><span class="kd">public</span> <span class="kt">void</span> <span class="nf">testAllOptionsAreVisible</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">ImmutableSet</span><span class="o">&lt;</span><span class="n">Option</span><span class="o">&gt;</span> <span class="n">visibleOptions</span> <span class="o">=</span> <span class="n">methodContainingApplicationLogic</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">assertEquals</span><span class="o">(</span><span class="n">ImmutableSet</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="n">Option</span><span class="o">.</span><span class="na">values</span><span class="o">()),</span> <span class="n">visibleOptions</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here <code>ImmutableSet</code> refers to <a href="http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ImmutableSet.html">this Guava collection</a>, and <code>Option</code> is some
+enum defined by the application. In Java, all enums are automatically equipped with a
+static <code>values()</code> method, which returns an array of all the values on that enum, and so
+the intent here is to build a set containing all the enum values and compare that against
+the set built up by the test&rsquo;s setup logic.</p>
+
+<p>Digging through the error logs of the coverage run, the error looked liked this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">AssertionError</span><span class="o">:</span> <span class="nl">expected:</span><span class="o">&lt;[</span><span class="n">Lcom</span><span class="o">.</span><span class="na">google</span><span class="o">.</span><span class="na">ads</span><span class="o">.</span><span class="na">whatever</span><span class="o">.</span><span class="na">Option</span><span class="o">;</span><span class="err">@</span><span class="mi">12345678</span><span class="o">&gt;</span> <span class="n">but</span> <span class="nl">was:</span><span class="o">&lt;[</span><span class="n">FOO</span><span class="o">,</span> <span class="n">BAR</span><span class="o">,</span> <span class="n">BAZ</span><span class="o">]&gt;</span>
+</span><span class='line'>       <span class="n">at</span> <span class="n">OptionsPageTest</span><span class="o">.</span><span class="na">testAllOptionsAreVisible</span><span class="o">(</span><span class="n">OptionsPageTest</span><span class="o">.</span><span class="na">java</span><span class="o">:</span><span class="mi">42</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you&rsquo;re a Java person, the problem is fairly obvious; the thing on the left (corresponding to the first argument
+to <code>assertEquals</code>) is an <code>ImmutableSet&lt;Option[]&gt;</code> containing the result of calling <code>values()</code>,
+instead of an <code>ImmutableSet&lt;Option&gt;</code> containing a copy of the array. If you look at the docs linked above,
+you&rsquo;ll notice that <code>ImmutableSet</code> doesn&rsquo;t actually have
+an <code>of(E[])</code> method, which means that it wouldn&rsquo;t copy the contents of the array. Instead the type inference
+comes up with <code>ImmutableSet&lt;Option[]&gt;</code> and the method called is the <code>of(E)</code> method where <code>E = Option[]</code>.</p>
+
+<p>So the fix was to use <code>copyOf</code> instead of <code>of</code>, and that&rsquo;s that. But now it seemed like the test shouldn&rsquo;t have
+been passing in the first place, even during regular runs, since it was relying on this non-existent <code>of(E[])</code> method
+that copies arrays. So what was going on really?</p>
+
+<p>This requires a bit of background on GWT. GWT is a set of tools to write web apps, and its main premise is that
+it&rsquo;s based on a Java to JavaScript compiler. You write apps in Java against a subset of the standard library, plus
+a bunch of GWT-specific libraries, and the compiler takes in your Java source (not the compiled class files),
+does a whole bunch of very aggressive optimizations, and spits out JavaScript.</p>
+
+<p>Since the compiler takes in Java source code, it can&rsquo;t deal with native methods, which are common in the standard
+library classes. It can also be useful to reimplement standard classes in such a way as to take advantage of
+JavaScript features and browser APIs &mdash; implementing <code>ArrayList</code> in terms of a JavaScript <code>Array</code>, for instance.
+Given this, GWT has a notion of <em>emulated classes</em>; classes are reimplemented in GWT-friendly Java,
+<a href="http://code.google.com/p/google-web-toolkit-doc-1-5/wiki/DevGuideModuleXml#Overriding_one_package_implementation_with_another">a special directive</a> can be passed to the GWT compiler to let it find the emulated source,
+and the emulated classes are compiled to JavaScript alongside application code.
+GWT includes emulated versions of <a href="http://www.gwtproject.org/doc/latest/RefJreEmulation.html">a subset of the standard library</a>, and the abovementioned directive
+is also available for applications or other libraries to use.</p>
+
+<p>As it happens, one of these libraries was Guava &mdash; several Guava collections, including <code>ImmutableSet</code>, have
+emulated versions for use by GWT applications.</p>
+
+<p>Switching gears slightly, one of the big selling points of GWT when it came out was that it was compatible with
+a lot of popular Java tools &mdash; you could step through your app using Eclipse&rsquo;s debugger, run tests
+with JUnit, and measure code coverage using <a href="http://emma.sourceforge.net/">Emma</a>, a popular open source Java coverage tool.</p>
+
+<p>To enable this, even though GWT application code ran as JavaScript in a browser in production, it could also
+be made to run as Java bytecode in a JVM in order to be more amenable to Java-based tools. Since the GWT compiler
+has all the source, it can just forward it along to a Java compiler and execute the resulting
+bytecode. There is just one snag, which is that GWT code can execute native JavaScript via GWT&rsquo;s
+<a href="http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsJSNI.html">JavaScript native interface (JSNI)</a> (either directly, or by calling into GWT libraries).
+For those cases, GWT supports <a href="http://www.gwtproject.org/javadoc/latest/com/google/gwt/junit/client/GWTTestCase.html">fancy JUnit integration</a> where the code still runs as Java,
+except that a browser is brought up (either an emulated in-memory browser, or a real headless browser), native
+JavaScript methods are injected into it, and those native methods have their bytecode rewritten so that they use
+special wrappers that call the corresponding methods in the browser.</p>
+
+<p>(As you might imagine, this is quite a bit slower &mdash; it&rsquo;s often not necessary as big chunks of testable code
+consist of relatively isolated application logic and can just run as plain Java instead of this hybrid mode.
+GWT also supports a &ldquo;web mode&rdquo; when the tests run as full on JavaScript &mdash; this is even slower, but is useful
+to ward against possible behavior differences between Java and JavaScript.)</p>
+
+<p>Now Emma is a coverage tool that works with JVM bytecode &mdash; in a manner similar to what I described in <a href="/blog/2013/05/03/writing-a-code-coverage-tool">my last post</a>,
+it instruments class files, so that as they run, they create some files containing coverage data,
+which are later picked up to produce coverage reports. GWT&rsquo;s Emma support is the aspect of this whole thing that I
+understand least. (There exists a wiki page with <a href="http://code.google.com/p/google-web-toolkit/wiki/EmmaSupport">some notes on Emma support</a>, but it&rsquo;s not very enlightening).
+It seems that whatever magic GWT needs to perform to play nice with Emma is not done for emulated classes.
+The only thing I could find related to this is <a href="https://groups.google.com/forum/#!msg/scalagwt/TE5O9hDTTd4/ENvpFnK2AkkJ">this old thread from the Scala+GWT project</a>,
+which also isn&rsquo;t very enlightening, but seems to say that when Emma support was being developed it was decided that
+emulated classes weren&rsquo;t worth supporting since, among other things, they weren&rsquo;t used much.
+In any case, this means that for coverage runs, not only does the code run as Java in a JVM, but it runs against
+the &ldquo;real&rdquo; versions of classes.</p>
+
+<p>The final piece of the puzzle is that this mystery <code>ImmutableSet.of(E[])</code> method <em>used</em> to exist; you can browse
+<a href="http://docs.guava-libraries.googlecode.com/git-history/v10.0/javadoc/com/google/common/collect/ImmutableSet.html">an old version of the docs</a> to see it. It was deprecated for a long time and eventually removed.
+However, for whatever reason, the GWT-emulated version was not kept in sync with these changes. So the GWT-emulated
+version still had that method, and this was why the regular test run, which ran against the emulated classes, passed.
+The coverage run, which ran against the &ldquo;real&rdquo; Guava, failed.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Ismail Badawi</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-04T02:03:00-05:00" pubdate data-updated="true">Feb 4<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/code/'>code</a>, <a class='category' href='/blog/categories/google/'>google</a>, <a class='category' href='/blog/categories/gwt/'>gwt</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/05/03/writing-a-code-coverage-tool/" title="Previous Post: Writing a code coverage tool">&laquo; Writing a code coverage tool</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/02/04/an-obscure-bug-story/">An Obscure Bug Story</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/05/03/writing-a-code-coverage-tool/">Writing a Code Coverage Tool</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Ismail Badawi -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'isbadawi';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ismail.badawi.io/blog/2014/02/04/an-obscure-bug-story/';
+        var disqus_url = 'http://ismail.badawi.io/blog/2014/02/04/an-obscure-bug-story/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
