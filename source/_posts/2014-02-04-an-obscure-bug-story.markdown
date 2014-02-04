@@ -1,17 +1,17 @@
 ---
 layout: post
-title: 'My "hardest bug" story'
-date: 2014-01-19 02:03
+title: 'An obscure bug story'
+date: 2014-02-04 02:03
 comments: true
-categories: [code, google, gwt, bug]
+categories: [code, google, gwt]
 ---
 
 It's common to be asked a question like "what's the hardest bug you've debugged?"
 at job interviews in tech. This post is about the bug I usually describe.
-Somehow I feel like every time I explain it I'm less and less confident that I
-understand it completely, and so the hope is that by writing it out and
-fact checking it I'll have a better handle on it. It's also kind of strange
-and interesting.
+The snag is that it's quite involved and I don't actually understand it all the
+way through -- there are one or two aspects to it I often hand-wavingly gloss over.
+The hope was that by writing it out and fact checking it I'd have a better handle
+on it; this is what came out.
 
 <!--more-->
 
@@ -85,28 +85,33 @@ emulated versions for use by GWT applications.
 
 Switching gears slightly, one of the big selling points of GWT when it came out was that it was compatible with
 a lot of popular Java tools -- you could step through your app using Eclipse's debugger, run tests
-with JUnit, and measure code coverage using [EMMA][emma], a popular open source Java coverage tool.
+with JUnit, and measure code coverage using [Emma][emma], a popular open source Java coverage tool.
 
-To enable this, even though GWT application code ran as JavaScript in a browser in production, it would be made
-to run as Java bytecode in a JVM in some contexts. 
+To enable this, even though GWT application code ran as JavaScript in a browser in production, it could also
+be made to run as Java bytecode in a JVM in order to be more amenable to Java-based tools. Since the GWT compiler
+has all the source, it can just forward it along to a Java compiler and execute the resulting
+bytecode. There is just one snag, which is that GWT code can execute native JavaScript via GWT's
+[JavaScript native interface (JSNI)][jsni] (either directly, or by calling into GWT libraries).
+For those cases, GWT supports [fancy JUnit integration][gwttestcase] where the code still runs as Java,
+except that a browser is brought up (either an emulated in-memory browser, or a real headless browser), native
+JavaScript methods are injected into it, and those native methods have their bytecode rewritten so that they use
+special wrappers that call the corresponding methods in the browser.
 
-For example, although GWT did support [fancy JUnit integration][gwttestcase]
-where the code would run as JavaScript against either an emulated browser or a real browser, this would make tests
-run pretty slowly, and often wasn't actually necessary, as big chunks of testable code consist of relatively standalone
-application logic. So unless tests relied on browser APIs or things like that, they could be run as plain Java against
-plain JUnit, which was nice and quick.
+(As you might imagine, this is quite a bit slower -- it's often not necessary as big chunks of testable code
+consist of relatively isolated application logic and can just run as plain Java instead of this hybrid mode.
+GWT also supports a "web mode" when the tests run as full on JavaScript -- this is even slower, but is useful
+to ward against possible behavior differences between Java and JavaScript.)
 
-Now EMMA works on JVM bytecode -- it instruments the class file, so that as it runs, it creates some files containing
-coverage data, which is later picked up to produce coverage reports. There's no way around this -- it is strictly
-a JVM bytecode tool. This means that in order to support coverage runs using EMMA, the GWT application has to
-run as Java on a JVM, and not as JavaScript. (There exists a wiki page with [some notes on EMMA support][emmagwtwiki],
-but it's not very enlightening).
-
-Now there is one aspect to this that I'm unsure about, which that it seems like whatever magic GWT performs to
-support EMMA is not done for emulated classes. The only thing I could find related to this is 
-[this old thread from the Scala+GWT project][scalagwt], which also isn't very enlightening. 
-In any case, this means that for coverage runs, not only
-does the code run as Java in a JVM, but it uses the "real" versions of classes even if emulated classes exist.
+Now Emma is a coverage tool that works with JVM bytecode -- in a manner similar to what I described in [my last post][coverage-post],
+it instruments class files, so that as they run, they create some files containing coverage data,
+which are later picked up to produce coverage reports. GWT's Emma support is the aspect of this whole thing that I
+understand least. (There exists a wiki page with [some notes on Emma support][emmagwtwiki], but it's not very enlightening).
+It seems that whatever magic GWT needs to perform to play nice with Emma is not done for emulated classes.
+The only thing I could find related to this is [this old thread from the Scala+GWT project][scalagwt],
+which also isn't very enlightening, but seems to say that when Emma support was being developed it was decided that
+emulated classes weren't worth supporting since, among other things, they weren't used much.
+In any case, this means that for coverage runs, not only does the code run as Java in a JVM, but it runs against
+the "real" versions of classes.
 
 The final piece of the puzzle is that this mystery `ImmutableSet.of(E[])` method *used* to exist; you can browse
 [an old version of the docs][oldset-javadoc] to see it. It was deprecated for a long time and eventually removed.
@@ -122,3 +127,5 @@ The coverage run, which ran against the "real" Guava, failed.
 [emma]: http://emma.sourceforge.net/
 [emmagwtwiki]: http://code.google.com/p/google-web-toolkit/wiki/EmmaSupport
 [scalagwt]: https://groups.google.com/forum/#!msg/scalagwt/TE5O9hDTTd4/ENvpFnK2AkkJ
+[jsni]: http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsJSNI.html
+[coverage-post]: /blog/2013/05/03/writing-a-code-coverage-tool
