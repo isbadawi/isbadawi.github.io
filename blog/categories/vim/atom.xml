@@ -4,7 +4,7 @@
   <title><![CDATA[Category: vim | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/vim/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2014-04-23T21:30:17-04:00</updated>
+  <updated>2014-04-23T21:49:16-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -231,7 +231,7 @@ editing primitives is one of the most important steps towards efficient vim
 use, and is the main thing I try to impress upon beginning vim users whenever
 the opportunity arises. Having this pointed out to me would certainly would
 have saved me a lot of time, as many of the &ldquo;tricks&rdquo; that I learned piecemeal
-during my first few years using vim were just special cases of this sort of
+during my first few years using vim were just instances of this sort of
 composition.</p>
 ]]></content>
   </entry>
