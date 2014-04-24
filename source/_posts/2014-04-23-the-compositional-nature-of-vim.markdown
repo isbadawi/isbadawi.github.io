@@ -218,7 +218,7 @@ editing primitives is one of the most important steps towards efficient vim
 use, and is the main thing I try to impress upon beginning vim users whenever
 the opportunity arises. Having this pointed out to me would certainly would
 have saved me a lot of time, as many of the "tricks" that I learned piecemeal
-during my first few years using vim were just special cases of this sort of
+during my first few years using vim were just instances of this sort of
 composition.
 
 [commentary]: https://github.com/tpope/vim-commentary
