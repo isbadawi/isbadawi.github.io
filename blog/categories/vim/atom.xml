@@ -4,7 +4,7 @@
   <title><![CDATA[Category: vim | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/vim/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2014-05-18T12:46:54-04:00</updated>
+  <updated>2014-05-18T16:12:11-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -138,7 +138,7 @@ different than the previous ones, since they operate on lines. For instance,
 configurable, but by default it reflows text so it&rsquo;s wrapped to <code>textwidth</code>
 characters. This is useful if you&rsquo;re looking to use no more than 80 characters
 per line, for instance. As before, you can use <code>gqgg</code> to reflow text to the top
-of the file, <code>gqG</code> to reflow text to the bottom of file, <code>gq15k</code> to reflow ten
+of the file, <code>gqG</code> to reflow text to the bottom of file, <code>gq10k</code> to reflow ten
 lines up, and so on.</p>
 
 <p>The nice thing here is that each operator we learn about can be composed with
