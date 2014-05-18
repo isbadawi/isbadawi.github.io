@@ -4,7 +4,7 @@
   <title><![CDATA[Category: vim | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/vim/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2014-04-23T21:49:16-04:00</updated>
+  <updated>2014-05-18T12:46:54-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -34,7 +34,7 @@ with <code>yy</code>, and paste it somewhere with <code>p</code>. This meant tha
 the current line! I learned that I could indent the current line with <code>&gt;&gt;</code>, and
 also that I could indent the next 5 lines with <code>5&gt;&gt;</code>. I learned that <code>gg</code>
 jumped to the top of the file. I learned that I could jump to line 34 with
-<code>G34</code>. I also learned a strange incantation &mdash; I could write <code>%s/foo/bar/g</code> to
+<code>34G</code>. I also learned a strange incantation &mdash; I could write <code>%s/foo/bar/g</code> to
 replace all occurrences of <code>foo</code> with <code>bar</code> in the whole file. I used this all
 the time, and vim felt really powerful!</p>
 
