@@ -125,7 +125,7 @@ Another operator is `gq`, which is used for formatting. The specifics are
 configurable, but by default it reflows text so it's wrapped to `textwidth`
 characters. This is useful if you're looking to use no more than 80 characters
 per line, for instance. As before, you can use `gqgg` to reflow text to the top
-of the file, `gqG` to reflow text to the bottom of file, `gq15k` to reflow ten
+of the file, `gqG` to reflow text to the bottom of file, `gq10k` to reflow ten
 lines up, and so on.
 
 The nice thing here is that each operator we learn about can be composed with
