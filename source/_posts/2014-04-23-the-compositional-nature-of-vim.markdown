@@ -193,7 +193,7 @@ or just its contents, respectively. This lets you write things like `dar` to
 delete the entire block the cursor is in, or `<ir` to dedent its contents.
 
 One can also add new motions. For example, the
-[CamelCaseMotion][camelcasemotion] plugin defines camel-case analoguess of the
+[CamelCaseMotion][camelcasemotion] plugin defines camel-case analogues of the
 `w`, `b`, and `e` motions, so that, for instance, you can jump to the start of
 the next word in a camel-cased identifier. It also defines text objects
 analogous to `iw` and so on for camel-cased words.
