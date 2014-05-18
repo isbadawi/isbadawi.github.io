@@ -4,7 +4,7 @@
   <title><![CDATA[Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2014-05-18T16:12:11-04:00</updated>
+  <updated>2014-05-18T16:13:22-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -154,7 +154,7 @@ just refer to a region of text.</p>
 <p>For example, the <code>_</code> text object refers to the current line. You can write <code>d_</code>
 to delete the current line, <code>c_</code> to delete it and enter insert mode, <code>y_</code> to
 yank it, <code>&gt;_</code> to indent it, <code>gu_</code> to lowercase it, <code>gU_</code> to uppercase it, <code>g~_</code>
-to toggle its case, <code>g?</code> to rot13 encode it and so on. Since operating on the
+to toggle its case, <code>g?_</code> to rot13 encode it and so on. Since operating on the
 current line is very common, repeating an operator is shorthand for applying it
 on the current line.  For instance, <code>dd</code> does the same thing as <code>d_</code>, <code>cc</code> does
 the same as <code>c_</code>, and so on.</p>
