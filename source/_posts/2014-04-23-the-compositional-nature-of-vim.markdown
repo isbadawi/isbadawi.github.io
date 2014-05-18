@@ -21,7 +21,7 @@ with `yy`, and paste it somewhere with `p`. This meant that `yyp` duplicated
 the current line! I learned that I could indent the current line with `>>`, and
 also that I could indent the next 5 lines with `5>>`. I learned that `gg`
 jumped to the top of the file. I learned that I could jump to line 34 with
-`G34`. I also learned a strange incantation -- I could write `%s/foo/bar/g` to
+`34G`. I also learned a strange incantation -- I could write `%s/foo/bar/g` to
 replace all occurrences of `foo` with `bar` in the whole file. I used this all
 the time, and vim felt really powerful!
 
