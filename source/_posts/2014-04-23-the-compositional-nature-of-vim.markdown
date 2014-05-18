@@ -141,7 +141,7 @@ just refer to a region of text.
 For example, the `_` text object refers to the current line. You can write `d_`
 to delete the current line, `c_` to delete it and enter insert mode, `y_` to
 yank it, `>_` to indent it, `gu_` to lowercase it, `gU_` to uppercase it, `g~_`
-to toggle its case, `g?` to rot13 encode it and so on. Since operating on the
+to toggle its case, `g?_` to rot13 encode it and so on. Since operating on the
 current line is very common, repeating an operator is shorthand for applying it
 on the current line.  For instance, `dd` does the same thing as `d_`, `cc` does
 the same as `c_`, and so on.
