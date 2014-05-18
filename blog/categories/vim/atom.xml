@@ -4,7 +4,7 @@
   <title><![CDATA[Category: vim | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/vim/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2014-05-18T16:13:22-04:00</updated>
+  <updated>2014-05-18T16:15:51-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -206,7 +206,7 @@ or just its contents, respectively. This lets you write things like <code>dar</c
 delete the entire block the cursor is in, or <code>&lt;ir</code> to dedent its contents.</p>
 
 <p>One can also add new motions. For example, the
-<a href="https://github.com/bkad/CamelCaseMotion">CamelCaseMotion</a> plugin defines camel-case analoguess of the
+<a href="https://github.com/bkad/CamelCaseMotion">CamelCaseMotion</a> plugin defines camel-case analogues of the
 <code>w</code>, <code>b</code>, and <code>e</code> motions, so that, for instance, you can jump to the start of
 the next word in a camel-cased identifier. It also defines text objects
 analogous to <code>iw</code> and so on for camel-cased words.</p>
