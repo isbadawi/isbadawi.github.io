@@ -4,7 +4,7 @@
   <title><![CDATA[Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2014-05-18T16:15:51-04:00</updated>
+  <updated>2014-05-21T19:02:02-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -116,11 +116,11 @@ until the same column on the next line). <code>gg</code> moves to the top of the
 it puts you in insert mode after. So <code>cj</code> behaves like <code>dj</code>, except that it
 puts you in insert mode. Similarly <code>cgg</code> behaves like <code>dgg</code> and so on.</p>
 
-<p>Another operator is <code>y</code>, which stands for yank. It copies things into registers.
-You can learn more about registers that later; to start with, you can just use
-<code>y</code> to yank things into the default register, and use <code>p</code> to put them somewhere
-else. As with <code>c</code> and <code>d</code>, you can use <code>yj</code> to yank down a line, <code>ygg</code> to yank
-to the top of the file, and so on.</p>
+<p>Another operator is <code>y</code>, which stands for yank. It copies things into
+registers.  You can learn more about registers later; to start with, you can
+just use <code>y</code> to yank things into the default register, and use <code>p</code> to put them
+somewhere else. As with <code>c</code> and <code>d</code>, you can use <code>yj</code> to yank down a line,
+<code>ygg</code> to yank to the top of the file, and so on.</p>
 
 <p>Another operator is <code>gu</code>, which is used for lowercasing. <code>gu4j</code> lowercases four
 lines down, <code>gugg</code> lowercases to the top of the file, <code>guG</code> lowercases to the
