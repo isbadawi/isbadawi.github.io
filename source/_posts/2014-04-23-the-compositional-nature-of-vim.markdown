@@ -103,11 +103,11 @@ Another operator is `c`, which stands for change. `c` is like `d`, except that
 it puts you in insert mode after. So `cj` behaves like `dj`, except that it
 puts you in insert mode. Similarly `cgg` behaves like `dgg` and so on.
 
-Another operator is `y`, which stands for yank. It copies things into registers.
-You can learn more about registers that later; to start with, you can just use
-`y` to yank things into the default register, and use `p` to put them somewhere
-else. As with `c` and `d`, you can use `yj` to yank down a line, `ygg` to yank
-to the top of the file, and so on.
+Another operator is `y`, which stands for yank. It copies things into
+registers.  You can learn more about registers later; to start with, you can
+just use `y` to yank things into the default register, and use `p` to put them
+somewhere else. As with `c` and `d`, you can use `yj` to yank down a line,
+`ygg` to yank to the top of the file, and so on.
 
 Another operator is `gu`, which is used for lowercasing. `gu4j` lowercases four
 lines down, `gugg` lowercases to the top of the file, `guG` lowercases to the
