@@ -5,12 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>The compositional nature of vim - Ismail Badawi</title>
+  <title>The Compositional Nature of Vim - Ismail Badawi</title>
   <meta name="author" content="Ismail Badawi">
 
   
   <meta name="description" content="I use vim. I&rsquo;ve used vim since I started programming; the very first program I
-wrote &mdash; hello world in C, following along a cprogramming. &hellip;">
+wrote &ndash; hello world in C, following along a cprogramming. &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,13 +19,13 @@ wrote &mdash; hello world in C, following along a cprogramming. &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ismail.badawi.io/blog/2014/04/23/the-compositional-nature-of-vim">
+  <link rel="canonical" href="http://ismail.badawi.io/blog/2014/04/23/the-compositional-nature-of-vim/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Ismail Badawi" type="application/atom+xml">
   <script src="/javascripts/modernizr-2.0.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
   <script src="/javascripts/octopress.js" type="text/javascript"></script>
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
 <link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
@@ -61,7 +61,7 @@ wrote &mdash; hello world in C, following along a cprogramming. &hellip;">
   
 <form action="https://www.google.com/search" method="get">
   <fieldset role="search">
-    <input type="hidden" name="q" value="site:ismail.badawi.io" />
+    <input type="hidden" name="sitesearch" value="ismail.badawi.io">
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
@@ -89,14 +89,7 @@ wrote &mdash; hello world in C, following along a cprogramming. &hellip;">
 
 
 
-
-
-
-
-  
-
-
-<time datetime="2014-04-23T18:10:22-04:00" pubdate data-updated="true">Apr 23<span>rd</span>, 2014</time>
+<time class='entry-date' datetime='2014-04-23T18:10:22-04:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2014</span></span> <span class='time'>6:10 pm</span></time>
         
       </p>
     
@@ -104,7 +97,7 @@ wrote &mdash; hello world in C, following along a cprogramming. &hellip;">
 
 
 <div class="entry-content"><p>I use vim. I&rsquo;ve used vim since I started programming; the very first program I
-wrote &mdash; hello world in C, following along a cprogramming.com tutorial &mdash; was
+wrote &ndash; hello world in C, following along a cprogramming.com tutorial &ndash; was
 typed out in vim, inside a cygwin environment on Windows. Naturally, at first
 it was hard and intimidating. I didn&rsquo;t know how to do anything, least of all
 edit text. I learned about insert mode and normal mode. I learned about
@@ -119,7 +112,7 @@ with <code>yy</code>, and paste it somewhere with <code>p</code>. This meant tha
 the current line! I learned that I could indent the current line with <code>&gt;&gt;</code>, and
 also that I could indent the next 5 lines with <code>5&gt;&gt;</code>. I learned that <code>gg</code>
 jumped to the top of the file. I learned that I could jump to line 34 with
-<code>34G</code>. I also learned a strange incantation &mdash; I could write <code>%s/foo/bar/g</code> to
+<code>34G</code>. I also learned a strange incantation &ndash; I could write <code>%s/foo/bar/g</code> to
 replace all occurrences of <code>foo</code> with <code>bar</code> in the whole file. I used this all
 the time, and vim felt really powerful!</p>
 
@@ -134,17 +127,17 @@ vim questions, really I was just getting by on ad-hoc memorization.</p>
 people have a tendency to think that becoming an effective vim user just means
 memorizing enough arcane commands that eventually you&rsquo;ll just know which
 incantation to type in to do what you want in any given situation. Want to copy
-the whole file to the clipboard?  Easy &mdash; it&rsquo;s <code>gg"*yG</code>, right? Yes, that&rsquo;s it.
-I have it here in my notes &mdash; &ldquo;copy file to clipboard: <code>gg"*yG</code>&rdquo;. Copying the
-next two paragraphs? Gee, I don&rsquo;t know, let me look that up &mdash; ah, here. It&rsquo;s
+the whole file to the clipboard?  Easy &ndash; it&rsquo;s <code>gg"*yG</code>, right? Yes, that&rsquo;s it.
+I have it here in my notes &ndash; &ldquo;copy file to clipboard: <code>gg"*yG</code>&rdquo;. Copying the
+next two paragraphs? Gee, I don&rsquo;t know, let me look that up &ndash; ah, here. It&rsquo;s
 <code>{"*y2}</code>. I&rsquo;ll just write that down and next time it comes up I&rsquo;ll know.</p>
 
-<p>Some people are (rightly) turned off by this. Others &mdash; like me &mdash; take it in
+<p>Some people are (rightly) turned off by this. Others &ndash; like me &ndash; take it in
 stride and spend years memorizing opaque formulas like the above, motivated in
 large part by the oft-touted idea that knowing vim inside and out will make you
 orders of magnitude more productive (and in no small part by garden-variety
 hipsterism). I know from experience that this approach can take you quite a long
-way. It&rsquo;ll only take you so far though &mdash; in the end it&rsquo;s as silly as learning
+way. It&rsquo;ll only take you so far though &ndash; in the end it&rsquo;s as silly as learning
 to speak English by trying to memorize all the possible sentences you can say,
 without learning about verbs or nouns.</p>
 
@@ -303,7 +296,7 @@ happened to want to comment out the contents of a ruby block, and intuitively I
 reached for <code>gcir</code>. This wasn&rsquo;t something I&rsquo;d learned. It certainly wasn&rsquo;t
 documented anywhere that this would work; the two plugins had been written
 independently by two different people. Not only did I not learn this, but I
-didn&rsquo;t even explicitly think about it. This was just intuition &mdash; since one of
+didn&rsquo;t even explicitly think about it. This was just intuition &ndash; since one of
 the operators at my disposal is <code>gc</code>, and one of the text objects at my
 disposal is <code>ir</code>, then <code>gcir</code> ought to work. And it did!</p>
 
@@ -333,14 +326,7 @@ composition.</p>
 
 
 
-
-
-
-
-  
-
-
-<time datetime="2014-04-23T18:10:22-04:00" pubdate data-updated="true">Apr 23<span>rd</span>, 2014</time>
+<time class='entry-date' datetime='2014-04-23T18:10:22-04:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2014</span></span> <span class='time'>6:10 pm</span></time>
       
 
 <span class="categories">
@@ -408,7 +394,7 @@ composition.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Ismail Badawi -
+  Copyright &copy; 2015 - Ismail Badawi -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

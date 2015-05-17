@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>An obscure bug story - Ismail Badawi</title>
+  <title>An Obscure Bug Story - Ismail Badawi</title>
   <meta name="author" content="Ismail Badawi">
 
   
@@ -19,13 +19,13 @@ at job interviews in tech. This post &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ismail.badawi.io/blog/2014/02/04/an-obscure-bug-story">
+  <link rel="canonical" href="http://ismail.badawi.io/blog/2014/02/04/an-obscure-bug-story/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Ismail Badawi" type="application/atom+xml">
   <script src="/javascripts/modernizr-2.0.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
   <script src="/javascripts/octopress.js" type="text/javascript"></script>
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
 <link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
@@ -61,7 +61,7 @@ at job interviews in tech. This post &hellip;">
   
 <form action="https://www.google.com/search" method="get">
   <fieldset role="search">
-    <input type="hidden" name="q" value="site:ismail.badawi.io" />
+    <input type="hidden" name="sitesearch" value="ismail.badawi.io">
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
@@ -89,14 +89,7 @@ at job interviews in tech. This post &hellip;">
 
 
 
-
-
-
-
-  
-
-
-<time datetime="2014-02-04T02:03:00-05:00" pubdate data-updated="true">Feb 4<span>th</span>, 2014</time>
+<time class='entry-date' datetime='2014-02-04T02:03:00-05:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>2:03 am</span></time>
         
       </p>
     
@@ -106,7 +99,7 @@ at job interviews in tech. This post &hellip;">
 <div class="entry-content"><p>It&rsquo;s common to be asked a question like &ldquo;what&rsquo;s the hardest bug you&rsquo;ve debugged?&rdquo;
 at job interviews in tech. This post is about the bug I usually describe.
 The snag is that it&rsquo;s quite involved and I don&rsquo;t actually understand it all the
-way through &mdash; there are one or two aspects to it I often hand-wavingly gloss over.
+way through &ndash; there are one or two aspects to it I often hand-wavingly gloss over.
 The hope was that by writing it out and fact checking it I&rsquo;d have a better handle
 on it; this is what came out.</p>
 
@@ -127,7 +120,7 @@ strange property: it would pass during regular test runs, but it would fail duri
 coverage runs. (In particular, there was an automatic nightly coverage run which
 always showed up as failing because of this.)</p>
 
-<p>So this was weird &mdash; why would running a test for coverage change its outcome?</p>
+<p>So this was weird &ndash; why would running a test for coverage change its outcome?</p>
 
 <p>I don&rsquo;t remember what the test was actually testing, but modulo identifiers the
 relevant bit looked something like this:</p>
@@ -178,18 +171,18 @@ does a whole bunch of very aggressive optimizations, and spits out JavaScript.</
 
 <p>Since the compiler takes in Java source code, it can&rsquo;t deal with native methods, which are common in the standard
 library classes. It can also be useful to reimplement standard classes in such a way as to take advantage of
-JavaScript features and browser APIs &mdash; implementing <code>ArrayList</code> in terms of a JavaScript <code>Array</code>, for instance.
+JavaScript features and browser APIs &ndash; implementing <code>ArrayList</code> in terms of a JavaScript <code>Array</code>, for instance.
 Given this, GWT has a notion of <em>emulated classes</em>; classes are reimplemented in GWT-friendly Java,
 <a href="http://code.google.com/p/google-web-toolkit-doc-1-5/wiki/DevGuideModuleXml#Overriding_one_package_implementation_with_another">a special directive</a> can be passed to the GWT compiler to let it find the emulated source,
 and the emulated classes are compiled to JavaScript alongside application code.
 GWT includes emulated versions of <a href="http://www.gwtproject.org/doc/latest/RefJreEmulation.html">a subset of the standard library</a>, and the abovementioned directive
 is also available for applications or other libraries to use.</p>
 
-<p>As it happens, one of these libraries was Guava &mdash; several Guava collections, including <code>ImmutableSet</code>, have
+<p>As it happens, one of these libraries was Guava &ndash; several Guava collections, including <code>ImmutableSet</code>, have
 emulated versions for use by GWT applications.</p>
 
 <p>Switching gears slightly, one of the big selling points of GWT when it came out was that it was compatible with
-a lot of popular Java tools &mdash; you could step through your app using Eclipse&rsquo;s debugger, run tests
+a lot of popular Java tools &ndash; you could step through your app using Eclipse&rsquo;s debugger, run tests
 with JUnit, and measure code coverage using <a href="http://emma.sourceforge.net/">Emma</a>, a popular open source Java coverage tool.</p>
 
 <p>To enable this, even though GWT application code ran as JavaScript in a browser in production, it could also
@@ -202,12 +195,12 @@ except that a browser is brought up (either an emulated in-memory browser, or a 
 JavaScript methods are injected into it, and those native methods have their bytecode rewritten so that they use
 special wrappers that call the corresponding methods in the browser.</p>
 
-<p>(As you might imagine, this is quite a bit slower &mdash; it&rsquo;s often not necessary as big chunks of testable code
+<p>(As you might imagine, this is quite a bit slower &ndash; it&rsquo;s often not necessary as big chunks of testable code
 consist of relatively isolated application logic and can just run as plain Java instead of this hybrid mode.
-GWT also supports a &ldquo;web mode&rdquo; when the tests run as full on JavaScript &mdash; this is even slower, but is useful
+GWT also supports a &ldquo;web mode&rdquo; when the tests run as full on JavaScript &ndash; this is even slower, but is useful
 to ward against possible behavior differences between Java and JavaScript.)</p>
 
-<p>Now Emma is a coverage tool that works with JVM bytecode &mdash; in a manner similar to what I described in <a href="/blog/2013/05/03/writing-a-code-coverage-tool">my last post</a>,
+<p>Now Emma is a coverage tool that works with JVM bytecode &ndash; in a manner similar to what I described in <a href="/blog/2013/05/03/writing-a-code-coverage-tool">my last post</a>,
 it instruments class files, so that as they run, they create some files containing coverage data,
 which are later picked up to produce coverage reports. GWT&rsquo;s Emma support is the aspect of this whole thing that I
 understand least. (There exists a wiki page with <a href="http://code.google.com/p/google-web-toolkit/wiki/EmmaSupport">some notes on Emma support</a>, but it&rsquo;s not very enlightening).
@@ -238,14 +231,7 @@ The coverage run, which ran against the &ldquo;real&rdquo; Guava, failed.</p>
 
 
 
-
-
-
-
-  
-
-
-<time datetime="2014-02-04T02:03:00-05:00" pubdate data-updated="true">Feb 4<span>th</span>, 2014</time>
+<time class='entry-date' datetime='2014-02-04T02:03:00-05:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>2:03 am</span></time>
       
 
 <span class="categories">
@@ -315,7 +301,7 @@ The coverage run, which ran against the &ldquo;real&rdquo; Guava, failed.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Ismail Badawi -
+  Copyright &copy; 2015 - Ismail Badawi -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
