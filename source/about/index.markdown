@@ -6,13 +6,13 @@ sharing: false
 footer: true
 ---
 
-My name is Ismail Badawi. I'm currently a Master's student in Computer Science
-at McGill University, where I work on compiler stuff for MATLAB as part of
-[the McLab project][mclab]. I also did my undergrad at McGill with a joint major
-in Math and Computer Science, and I was a software engineering intern at Google
-in 2012 and 2013.
+Hi, you've reached my website. I'm Ismail Badawi. I currently work as a
+software engineer at a big technology company called Cisco Systems. Previously
+I was a graduate student at McGill University, where I did compiler stuff for
+MATLAB as part of [the McLab project][mclab]. I also interned at Google a
+couple of times along the way.
 
-If you want to get in touch with me for whatever reason, the best method is
+If you'd like to get in touch with me for any reason, the best method is
 [email][]. I can also be found on [github][] and [stackoverflow][].
 
 [email]: mailto:ismail@badawi.io
