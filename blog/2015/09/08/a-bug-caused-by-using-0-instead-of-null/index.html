@@ -1,0 +1,343 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>A Bug Caused by Using 0 Instead of NULL - Ismail Badawi</title>
+  <meta name="author" content="Ismail Badawi">
+
+  
+  <meta name="description" content="This is a quick post about a bug I ran into at work which turned out to be
+caused by passing a literal 0 instead of NULL to a function. Here&rsquo;s &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://ismail.badawi.io/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ismail Badawi" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-40856767-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ismail Badawi</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="sitesearch" value="ismail.badawi.io">
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/about">About</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">A Bug Caused by Using 0 Instead of NULL</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-09-08T13:37:49-04:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>1:37 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This is a quick post about a bug I ran into at work which turned out to be
+caused by passing a literal <code>0</code> instead of <code>NULL</code> to a function. Here&rsquo;s a
+small program reproducing it:</p>
+
+<!--more-->
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#include &lt;stdarg.h&gt;</span>
+</span><span class='line'><span class="cp">#include &lt;stdio.h&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span> <span class="nf">f</span><span class="p">(</span><span class="kt">int</span> <span class="n">arg</span><span class="p">,</span> <span class="p">...)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="kt">va_list</span> <span class="n">args</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">va_start</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="o">*</span><span class="n">p</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">arg</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">p</span> <span class="o">=</span> <span class="n">va_arg</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="kt">int</span><span class="o">*</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;p was non-null: %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">p</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;p was null</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">f</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">f</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Compiling this as a 64-bit program on an x86-64 processor with clang
+and running it gives this output:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>clang test.c
+</span><span class='line'><span class="nv">$ </span>./a.out
+</span><span class='line'>p was null
+</span><span class='line'>p was non-null: 0x7fff00000000
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>What is going on here?</p>
+
+<p>First, what is this <code>f</code> function doing? It takes an integer argument,
+followed by a variable number of arguments. It uses the first argument
+to decide which of the variable arguments to look at (starting at 1),
+and interprets it as a pointer value. Thus, if the call looked like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">f</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then <code>p</code> would take on the value <code>(int*)3</code>.</p>
+
+<p>For the two calls in the program, I&rsquo;m passing in 6 literal <code>0</code>s as the variable
+arguments. The first call examines the 5th one, and the second the 6th one. In
+the first case, <code>p</code> turns out be 0, as expected. But in the second case, it is
+nonzero. How come?</p>
+
+<p>There are two things going on.</p>
+
+<ol>
+<li><p>In the <a href="http://www.x86-64.org/documentation/abi.pdf">x86-64 calling convention</a> (refer to section 3.2.3), up to six
+integer arguments can be passed in registers. In the case of <code>f</code>, this
+includes the fixed positional argument <code>arg</code>, and then up to 5 arguments. In
+both calls I am passing six extra arguments, so the last one is passed on
+the stack, instead of in a register.</p></li>
+<li><p>In C, the literal <code>0</code> has type <code>int</code>, which is a 32-bit value. Thus, 32 bits
+worth of zeros are placed on the stack at the call site. But when <code>f</code>
+interprets the argument as a pointer, it reads 64 bits from the stack. The
+first 32 bits are zeros, but the next 32 are garbage &ndash; whatever happens to
+be on the stack (which could happen to be all zeros, or it might not, as in
+this case).</p></li>
+</ol>
+
+
+<p>If the last argument was <code>NULL</code> instead of <code>0</code>, then 64 bits worth of zeros
+would have been placed on the stack at the call site, since <code>NULL</code> is typically
+defined as something like <code>((void*)0)</code>, which is an expression of pointer type.</p>
+
+<p>I&rsquo;m not sure how consistent this behavior is across platforms or compilers. In
+particular, it seems that there exist ABIs where values passed as varargs are
+automatically sign-extended to 64 bits &ndash; so the program here would be fine.</p>
+
+<p>I tend to avoid using varargs in C, unless I&rsquo;m just wrapping <code>printf</code> or
+something. They&rsquo;re not type-checked, which is already giving up a lot, and then
+on 64-bit systems they can be pretty complicated to reason about. Here is an
+<a href="https://blog.nelhage.com/2010/10/amd64-and-va_arg/">interesting article</a> about the implementation of varargs in the amd64
+ABI.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Ismail Badawi</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2015-09-08T13:37:49-04:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>1:37 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/c/'>c</a>, <a class='category' href='/blog/categories/code/'>code</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/09/07/when-optimizations-hide-bugs/" title="Previous Post: When optimizations hide bugs">&laquo; When optimizations hide bugs</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/">A Bug Caused by Using 0 Instead of NULL</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/07/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/23/the-compositional-nature-of-vim/">The Compositional Nature of Vim</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/02/04/an-obscure-bug-story/">An Obscure Bug Story</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/05/03/writing-a-code-coverage-tool/">Writing a Code Coverage Tool</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Ismail Badawi -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'isbadawi';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ismail.badawi.io/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/';
+        var disqus_url = 'http://ismail.badawi.io/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

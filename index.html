@@ -9,8 +9,8 @@
   <meta name="author" content="Ismail Badawi">
 
   
-  <meta name="description" content="The past few months at work I&rsquo;ve been working with a large legacy codebase,
-mostly written in C. In order to debug problems as they come up, I &hellip;">
+  <meta name="description" content="This is a quick post about a bug I ran into at work which turned out to be
+caused by passing a literal 0 instead of NULL to a function. Here&rsquo;s &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -77,6 +77,42 @@ mostly written in C. In order to debug problems as they come up, I &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/">A Bug Caused by Using 0 Instead of NULL</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-09-08T13:37:49-04:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>1:37 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This is a quick post about a bug I ran into at work which turned out to be
+caused by passing a literal <code>0</code> instead of <code>NULL</code> to a function. Here&rsquo;s a
+small program reproducing it:</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -259,6 +295,10 @@ for Java.</p>
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/">A Bug Caused by Using 0 Instead of NULL</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2015/09/07/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a>
