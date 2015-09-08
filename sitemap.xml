@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://ismail.badawi.io/blog/2015/09/07/when-optimizations-hide-bugs/</loc>
+    <lastmod>2015-09-07T21:08:41-04:00</lastmod>
+  </url>
+  <url>
     <loc>http://ismail.badawi.io/blog/2014/04/23/the-compositional-nature-of-vim/</loc>
     <lastmod>2014-04-23T18:10:22-04:00</lastmod>
   </url>
@@ -38,6 +42,12 @@
   </url>
   <url>
     <loc>http://ismail.badawi.io/blog/categories/vim/</loc>
+  </url>
+  <url>
+    <loc>http://ismail.badawi.io/blog/categories/c/</loc>
+  </url>
+  <url>
+    <loc>http://ismail.badawi.io/blog/categories/compilers/</loc>
   </url>
   <url>
     <loc>http://ismail.badawi.io/coverage-report/coverage-example/Hello.java.func-sort-c.html</loc>

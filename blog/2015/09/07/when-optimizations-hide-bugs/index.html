@@ -1,0 +1,485 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>When Optimizations Hide Bugs - Ismail Badawi</title>
+  <meta name="author" content="Ismail Badawi">
+
+  
+  <meta name="description" content="The past few months at work I&rsquo;ve been working with a large legacy codebase,
+mostly written in C. In order to debug problems as they come up, I &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://ismail.badawi.io/blog/2015/09/07/when-optimizations-hide-bugs/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ismail Badawi" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-40856767-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ismail Badawi</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="sitesearch" value="ismail.badawi.io">
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/about">About</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">When Optimizations Hide Bugs</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-09-07T21:08:41-04:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:08 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>The past few months at work I&rsquo;ve been working with a large legacy codebase,
+mostly written in C. In order to debug problems as they come up, I wanted to
+use gdb &ndash; but it seemed like the program was only ever compiled with
+optimizations turned on (<code>-O2</code>), which can make using gdb a frustrating
+experience, as every interesting value you might want to examine has been
+optimized out.</p>
+
+<p>After grappling with the build system to pass <code>-O0</code> in all the right places (a
+surprisingly difficult task), I found that the program did not link with
+optimizations turned off. Once I got around that, I ran into a crash in some
+basic functionality, easily reproducible at <code>-O0</code>, but not <code>-O2</code>. This post
+contains two tiny contrived programs reproducing those issues.</p>
+
+<!--more-->
+
+
+<h2>Optimizing away a reference to an undefined variable</h2>
+
+<p>As I mentioned, although the program compiled at <code>-O0</code>, it did not link. Here&rsquo;s
+a small program that reproduces this. This program is totally contrived, but it
+should hopefully not be too difficult to imagine seeing something like this in
+real code.</p>
+
+<p>There are three files involved here.</p>
+
+<figure class='code'><figcaption><span>foo.h</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#pragma once</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">extern</span> <span class="kt">int</span> <span class="n">foo_global</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">static</span> <span class="kr">inline</span> <span class="kt">int</span> <span class="nf">use_foo_global</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">foo_global</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>foo.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#include &quot;foo.h&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="n">foo_global</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>main.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#include &quot;foo.h&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="nf">ok_to_use_foo</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">ok_to_use_foo</span><span class="p">())</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">use_foo_global</span><span class="p">();</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>main.c</code> includes <code>foo.h</code>, which contains a <code>static inline</code> function which
+references a global variable which is defined in <code>foo.c</code>.</p>
+
+<p>Here&rsquo;s the thing, though &ndash; although <code>main.c</code> includes <code>foo.h</code>, it is actually
+not linked with <code>foo.c</code>. It is built on its own. (In the real code, this
+<code>foo.c</code> was sometimes included in the build and sometimes not, depending on
+which variant of the program you were building.)</p>
+
+<p>When I compile this with clang without optimizations, I predictably get this
+undefined reference error:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>clang main.c
+</span><span class='line'>Undefined symbols <span class="k">for</span> architecture x86_64:
+</span><span class='line'>  <span class="s2">&quot;_foo_global&quot;</span>, referenced from:
+</span><span class='line'>      _use_foo_global in <span class="nb">test</span>-11ddda.o
+</span><span class='line'>ld: symbol<span class="o">(</span>s<span class="o">)</span> not found <span class="k">for</span> architecture x86_64
+</span><span class='line'>clang-3.6: error: linker <span class="nb">command </span>failed with <span class="nb">exit </span>code <span class="m">1</span> <span class="o">(</span>use -v to see invocation<span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The program references <code>foo_global</code>, but <code>foo_global</code> is defined in <code>foo.c</code>
+which is not linked into the program.</p>
+
+<p>Of course, if you look closely, you&rsquo;ll see that the program actually never ends
+up using <code>foo_global</code> at runtime, based on some simple logic which is
+actually constant, but since it includes a function call, clang won&rsquo;t figure
+out at <code>-O0</code> that it is constant. (In the real code, this <code>ok_to_use_foo</code>
+function contained logic involving a few different preprocessor variables, but
+it was still ultimately constant).</p>
+
+<p>At <code>-O2</code>, clang will easily figure out that the conditional is always false, so
+it will optimize away the branch, which included the only call to that inline
+function, so the function will be optimized away entirely also, taking with it
+the reference to <code>foo_global</code>. Thus the program compiles cleanly and does what
+you&rsquo;d expect:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>clang -O2 main.c
+</span><span class='line'><span class="nv">$ </span>./a.out
+</span><span class='line'><span class="nv">$ </span><span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Optimizing away a corrupted stack variable</h2>
+
+<p>Consider this small program:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#include &lt;stdio.h&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">static</span> <span class="kt">void</span> <span class="nf">obtain_two_pointers</span><span class="p">(</span><span class="kt">void</span> <span class="o">**</span><span class="n">a</span><span class="p">,</span> <span class="kt">void</span> <span class="o">**</span><span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">a</span><span class="p">;</span>
+</span><span class='line'>  <span class="o">*</span><span class="n">b</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">b</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="kt">void</span> <span class="o">*</span><span class="n">c</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">void</span> <span class="o">*</span><span class="n">a</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">c</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">b</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%c: %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">c</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">obtain_two_pointers</span><span class="p">(</span><span class="o">&amp;</span><span class="n">a</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">b</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%c: %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">c</span><span class="p">);</span>
+</span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In this contrived program, <code>obtain_two_pointers</code> returns two pointers via
+output parameters. The calling code only cares about the first, so it passes in
+the address of a dummy local variable <code>b</code> to hold the second one.</p>
+
+<p>When I compile this program with clang without optimizations and run it, I get this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>clang foo.c
+</span><span class='line'>foo.c:14:24: warning: incompatible pointer types passing <span class="s1">&#39;int *&#39;</span> to parameter of <span class="nb">type</span> <span class="s1">&#39;void **&#39;</span>
+</span><span class='line'>      <span class="o">[</span>-Wincompatible-pointer-types<span class="o">]</span>
+</span><span class='line'>  obtain_two_pointers<span class="o">(</span><span class="p">&amp;</span>a, <span class="p">&amp;</span>b<span class="o">)</span><span class="p">;</span>
+</span><span class='line'>                       ^~
+</span><span class='line'>foo.c:3:47: note: passing argument to parameter <span class="s1">&#39;b&#39;</span> here
+</span><span class='line'>static void obtain_two_pointers<span class="o">(</span>void **a, void **b<span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                                              ^
+</span><span class='line'><span class="m">1</span> warning generated.
+</span><span class='line'><span class="nv">$ </span>./a.out
+</span><span class='line'>c: 0x7fff5118947c
+</span><span class='line'>c: 0x7fff00007fff
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The problem is that the code was written assuming that pointers were 32 bits
+wide, so that you could fit a pointer inside an <code>int</code> variable. On my machine,
+however, pointers are 64 bits wide, so that when <code>obtain_two_pointers</code> writes
+64 bits into the address of <code>b</code>, it corrupts the value of <code>c</code>, which is next to
+it on <code>main</code>&rsquo;s stack. This explains the output: after calling the function, the
+lower 32 bits of <code>c</code> are overwritten with the beginning of a pointer value. If
+we were to dereference <code>c</code> at this point, the program might crash.</p>
+
+<p>Incidentally, the warning clang gives here is totally on-point, but this being
+a huge legacy codebase, clang actually generates thousands of warnings, so this
+one went unnoticed. While there are efforts underway to go through and address
+all the warnings, it will probably take years before the program compiles
+cleanly.</p>
+
+<p>Now let&rsquo;s compile and run this program with optimizations turned on:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>clang -w -O2 foo.c
+</span><span class='line'><span class="nv">$ </span>./a.out
+</span><span class='line'>c: 0x7fff5c9f9470
+</span><span class='line'>c: 0x7fff5c9f9470
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>What happens here is that <code>c</code> gets optimized out, and the address of <code>b</code> is
+passed to the two <code>printf</code> invocations directly. There is still an extra 32
+bits written onto the stack, but they&rsquo;re harmless. (Actually in this case the
+call to <code>obtain_two_pointers</code> gets inlined so it&rsquo;s not quite that simple. If
+the function is declared <code>extern</code> and defined in another file, like it was in
+the real code, then it&rsquo;s easy to see that <code>c</code> is just optimized out.)</p>
+
+<h2>Lessons learned</h2>
+
+<ul>
+<li><p>Optimizations are behavior preserving, but not undefined behavior preserving.
+In the second program, the implicit cast from <code>int*</code> to <code>void**</code> when <code>&amp;b</code> is
+passed to the function is undefined behavior. That&rsquo;s why optimizing out <code>c</code>
+is a valid transformation even though it changes the behavior of the program.
+(I think.)</p></li>
+<li><p>Being conscientious about compiler warnings can pay off. I&rsquo;ve encountered
+people who say that compiler warnings are more trouble than they&rsquo;re worth,
+because the issues they find are either false positives, or trivial bugs that
+anyone would see. It is true that the bug in the second program is not hard
+to see &ndash; if anyone had had cause to read through that part of the code, they
+would have likely spotted it immediately. Unfortunately, in very large
+codebases, a lot of code is left to rot, only examined if it appears in the
+stack trace of a core file after a crash; at least, that&rsquo;s how I found this
+bug. But the compiler always reads all of the code, so if nothing else it can
+help find these trivial bugs in rarely-read code.</p></li>
+</ul>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Ismail Badawi</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2015-09-07T21:08:41-04:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:08 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/c/'>c</a>, <a class='category' href='/blog/categories/code/'>code</a>, <a class='category' href='/blog/categories/compilers/'>compilers</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/04/23/the-compositional-nature-of-vim/" title="Previous Post: The compositional nature of vim">&laquo; The compositional nature of vim</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/09/07/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/23/the-compositional-nature-of-vim/">The Compositional Nature of Vim</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/02/04/an-obscure-bug-story/">An Obscure Bug Story</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/05/03/writing-a-code-coverage-tool/">Writing a Code Coverage Tool</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Ismail Badawi -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'isbadawi';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ismail.badawi.io/blog/2015/09/07/when-optimizations-hide-bugs/';
+        var disqus_url = 'http://ismail.badawi.io/blog/2015/09/07/when-optimizations-hide-bugs/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

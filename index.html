@@ -9,8 +9,8 @@
   <meta name="author" content="Ismail Badawi">
 
   
-  <meta name="description" content="I use vim. I&rsquo;ve used vim since I started programming; the very first program I
-wrote &ndash; hello world in C, following along a cprogramming. &hellip;">
+  <meta name="description" content="The past few months at work I&rsquo;ve been working with a large legacy codebase,
+mostly written in C. In order to debug problems as they come up, I &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -77,6 +77,51 @@ wrote &ndash; hello world in C, following along a cprogramming. &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/09/07/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-09-07T21:08:41-04:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:08 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>The past few months at work I&rsquo;ve been working with a large legacy codebase,
+mostly written in C. In order to debug problems as they come up, I wanted to
+use gdb &ndash; but it seemed like the program was only ever compiled with
+optimizations turned on (<code>-O2</code>), which can make using gdb a frustrating
+experience, as every interesting value you might want to examine has been
+optimized out.</p>
+
+<p>After grappling with the build system to pass <code>-O0</code> in all the right places (a
+surprisingly difficult task), I found that the program did not link with
+optimizations turned off. Once I got around that, I ran into a crash in some
+basic functionality, easily reproducible at <code>-O0</code>, but not <code>-O2</code>. This post
+contains two tiny contrived programs reproducing those issues.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2015/09/07/when-optimizations-hide-bugs/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -214,6 +259,10 @@ for Java.</p>
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/09/07/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2014/04/23/the-compositional-nature-of-vim/">The Compositional Nature of Vim</a>

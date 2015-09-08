@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: c | Ismail Badawi]]></title>
+  <link href="http://ismail.badawi.io/blog/categories/c/atom.xml" rel="self"/>
+  <link href="http://ismail.badawi.io/"/>
+  <updated>2015-09-08T00:32:43-04:00</updated>
+  <id>http://ismail.badawi.io/</id>
+  <author>
+    <name><![CDATA[Ismail Badawi]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[When optimizations hide bugs]]></title>
+    <link href="http://ismail.badawi.io/blog/2015/09/07/when-optimizations-hide-bugs/"/>
+    <updated>2015-09-07T21:08:41-04:00</updated>
+    <id>http://ismail.badawi.io/blog/2015/09/07/when-optimizations-hide-bugs</id>
+    <content type="html"><![CDATA[<p>The past few months at work I&rsquo;ve been working with a large legacy codebase,
+mostly written in C. In order to debug problems as they come up, I wanted to
+use gdb &ndash; but it seemed like the program was only ever compiled with
+optimizations turned on (<code>-O2</code>), which can make using gdb a frustrating
+experience, as every interesting value you might want to examine has been
+optimized out.</p>
+
+<p>After grappling with the build system to pass <code>-O0</code> in all the right places (a
+surprisingly difficult task), I found that the program did not link with
+optimizations turned off. Once I got around that, I ran into a crash in some
+basic functionality, easily reproducible at <code>-O0</code>, but not <code>-O2</code>. This post
+contains two tiny contrived programs reproducing those issues.</p>
+
+<!--more-->
+
+
+<h2>Optimizing away a reference to an undefined variable</h2>
+
+<p>As I mentioned, although the program compiled at <code>-O0</code>, it did not link. Here&rsquo;s
+a small program that reproduces this. This program is totally contrived, but it
+should hopefully not be too difficult to imagine seeing something like this in
+real code.</p>
+
+<p>There are three files involved here.</p>
+
+<pre><code class="c foo.h">#pragma once
+
+extern int foo_global;
+
+static inline int use_foo_global(void) {
+  return foo_global;
+}
+</code></pre>
+
+<pre><code class="c foo.c">#include "foo.h"
+
+int foo_global = 10;
+</code></pre>
+
+<pre><code class="c main.c">#include "foo.h"
+
+int ok_to_use_foo(void) {
+  return 0;
+}
+
+int main(void) {
+  if (ok_to_use_foo()) {
+    return use_foo_global();
+  }
+  return 0;
+}
+</code></pre>
+
+<p><code>main.c</code> includes <code>foo.h</code>, which contains a <code>static inline</code> function which
+references a global variable which is defined in <code>foo.c</code>.</p>
+
+<p>Here&rsquo;s the thing, though &ndash; although <code>main.c</code> includes <code>foo.h</code>, it is actually
+not linked with <code>foo.c</code>. It is built on its own. (In the real code, this
+<code>foo.c</code> was sometimes included in the build and sometimes not, depending on
+which variant of the program you were building.)</p>
+
+<p>When I compile this with clang without optimizations, I predictably get this
+undefined reference error:</p>
+
+<pre><code class="bash">$ clang main.c
+Undefined symbols for architecture x86_64:
+  "_foo_global", referenced from:
+      _use_foo_global in test-11ddda.o
+ld: symbol(s) not found for architecture x86_64
+clang-3.6: error: linker command failed with exit code 1 (use -v to see invocation)
+</code></pre>
+
+<p>The program references <code>foo_global</code>, but <code>foo_global</code> is defined in <code>foo.c</code>
+which is not linked into the program.</p>
+
+<p>Of course, if you look closely, you&rsquo;ll see that the program actually never ends
+up using <code>foo_global</code> at runtime, based on some simple logic which is
+actually constant, but since it includes a function call, clang won&rsquo;t figure
+out at <code>-O0</code> that it is constant. (In the real code, this <code>ok_to_use_foo</code>
+function contained logic involving a few different preprocessor variables, but
+it was still ultimately constant).</p>
+
+<p>At <code>-O2</code>, clang will easily figure out that the conditional is always false, so
+it will optimize away the branch, which included the only call to that inline
+function, so the function will be optimized away entirely also, taking with it
+the reference to <code>foo_global</code>. Thus the program compiles cleanly and does what
+you&rsquo;d expect:</p>
+
+<pre><code class="bash">$ clang -O2 main.c
+$ ./a.out
+$ echo $?
+0
+</code></pre>
+
+<h2>Optimizing away a corrupted stack variable</h2>
+
+<p>Consider this small program:</p>
+
+<pre><code class="c">#include &lt;stdio.h&gt;
+
+static void obtain_two_pointers(void **a, void **b) {
+  *a = &amp;a;
+  *b = &amp;b;
+}
+
+int main(void) {
+  void *c;
+  int b;
+  void *a;
+
+  c = &amp;b;
+  printf("%c: %p\n", c);
+  obtain_two_pointers(&amp;a, &amp;b);
+  printf("%c: %p\n", c);
+  return 0;
+}
+</code></pre>
+
+<p>In this contrived program, <code>obtain_two_pointers</code> returns two pointers via
+output parameters. The calling code only cares about the first, so it passes in
+the address of a dummy local variable <code>b</code> to hold the second one.</p>
+
+<p>When I compile this program with clang without optimizations and run it, I get this:</p>
+
+<pre><code class="bash">$ clang foo.c
+foo.c:14:24: warning: incompatible pointer types passing 'int *' to parameter of type 'void **'
+      [-Wincompatible-pointer-types]
+  obtain_two_pointers(&amp;a, &amp;b);
+                       ^~
+foo.c:3:47: note: passing argument to parameter 'b' here
+static void obtain_two_pointers(void **a, void **b) {
+                                              ^
+1 warning generated.
+$ ./a.out
+c: 0x7fff5118947c
+c: 0x7fff00007fff
+</code></pre>
+
+<p>The problem is that the code was written assuming that pointers were 32 bits
+wide, so that you could fit a pointer inside an <code>int</code> variable. On my machine,
+however, pointers are 64 bits wide, so that when <code>obtain_two_pointers</code> writes
+64 bits into the address of <code>b</code>, it corrupts the value of <code>c</code>, which is next to
+it on <code>main</code>&rsquo;s stack. This explains the output: after calling the function, the
+lower 32 bits of <code>c</code> are overwritten with the beginning of a pointer value. If
+we were to dereference <code>c</code> at this point, the program might crash.</p>
+
+<p>Incidentally, the warning clang gives here is totally on-point, but this being
+a huge legacy codebase, clang actually generates thousands of warnings, so this
+one went unnoticed. While there are efforts underway to go through and address
+all the warnings, it will probably take years before the program compiles
+cleanly.</p>
+
+<p>Now let&rsquo;s compile and run this program with optimizations turned on:</p>
+
+<pre><code class="bash">$ clang -w -O2 foo.c
+$ ./a.out
+c: 0x7fff5c9f9470
+c: 0x7fff5c9f9470
+</code></pre>
+
+<p>What happens here is that <code>c</code> gets optimized out, and the address of <code>b</code> is
+passed to the two <code>printf</code> invocations directly. There is still an extra 32
+bits written onto the stack, but they&rsquo;re harmless. (Actually in this case the
+call to <code>obtain_two_pointers</code> gets inlined so it&rsquo;s not quite that simple. If
+the function is declared <code>extern</code> and defined in another file, like it was in
+the real code, then it&rsquo;s easy to see that <code>c</code> is just optimized out.)</p>
+
+<h2>Lessons learned</h2>
+
+<ul>
+<li><p>Optimizations are behavior preserving, but not undefined behavior preserving.
+In the second program, the implicit cast from <code>int*</code> to <code>void**</code> when <code>&amp;b</code> is
+passed to the function is undefined behavior. That&rsquo;s why optimizing out <code>c</code>
+is a valid transformation even though it changes the behavior of the program.
+(I think.)</p></li>
+<li><p>Being conscientious about compiler warnings can pay off. I&rsquo;ve encountered
+people who say that compiler warnings are more trouble than they&rsquo;re worth,
+because the issues they find are either false positives, or trivial bugs that
+anyone would see. It is true that the bug in the second program is not hard
+to see &ndash; if anyone had had cause to read through that part of the code, they
+would have likely spotted it immediately. Unfortunately, in very large
+codebases, a lot of code is left to rot, only examined if it appears in the
+stack trace of a core file after a crash; at least, that&rsquo;s how I found this
+bug. But the compiler always reads all of the code, so if nothing else it can
+help find these trivial bugs in rarely-read code.</p></li>
+</ul>
+
+]]></content>
+  </entry>
+  
+</feed>
