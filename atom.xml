@@ -4,7 +4,7 @@
   <title><![CDATA[Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2015-09-08T13:37:24-04:00</updated>
+  <updated>2016-03-25T22:34:37-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -12,6 +12,68 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Read-only File in Writable Directory]]></title>
+    <link href="http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory/"/>
+    <updated>2016-03-25T21:10:50-04:00</updated>
+    <id>http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory</id>
+    <content type="html"><![CDATA[<p>This is a small gotcha about file permissions I ran into recently.</p>
+
+<p>Let&rsquo;s say there is a file on which you don&rsquo;t have write permission:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>ls -l file
+</span><span class='line'>-rw-r--r--  <span class="m">1</span> notyou  somegroup  <span class="m">68</span> <span class="m">25</span> Mar 21:12 file
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can&rsquo;t write to this file:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span><span class="nb">echo</span> <span class="s2">&quot;some text&quot;</span> &gt; file
+</span><span class='line'>bash: file: Permission denied
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However, let&rsquo;s say this file is in a directory on which you do have write
+permission (assuming here that you are in <code>somegroup</code>):</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>ls -ld .
+</span><span class='line'>drwxrwxr-x  <span class="m">2</span> notyou  somegroup  <span class="m">68</span> <span class="m">25</span> Mar 21:12 dir
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now even though you can&rsquo;t modify the file, write permission on the directory
+lets you remove the file and write a new file in its place:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>rm file
+</span><span class='line'><span class="nv">$ </span><span class="nb">echo</span> <span class="s2">&quot;some text&quot;</span> &gt; file
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Depending on the situation, this can be just as good. You don&rsquo;t even have to do
+this manually &ndash;
+<a href="https://github.com/vim/vim/blob/1e7885abe8daa793fd9328d0fd6c456214cb467e/src/fileio.c#L4300-L4307">if you&rsquo;re using vim, then <code>:w!</code> will automatically do this if the file is not writable</a>.</p>
+
+<p>I encountered a system at work that would inspect the contents of certain files
+to decide whether to allow certain dangerous operations. These files had
+clearly defined owners that you were meant to get in touch with to ask for
+approval &ndash; if approval was granted, they would edit the relevant files for
+you, so that you could go ahead and do what you needed to do. But since the
+files were set up in this way &ndash; read-only in a group-writable directory &ndash; in
+practice anyone could edit them, bypassing whatever restrictions were in place.</p>
+
+<p>If you&rsquo;re relying on a file being read-only, be mindful of the permissions
+set on any parent directories.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[A Bug Caused by Using 0 Instead of NULL]]></title>

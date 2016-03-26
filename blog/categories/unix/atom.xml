@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: unix | Ismail Badawi]]></title>
+  <link href="http://ismail.badawi.io/blog/categories/unix/atom.xml" rel="self"/>
+  <link href="http://ismail.badawi.io/"/>
+  <updated>2016-03-25T22:34:37-04:00</updated>
+  <id>http://ismail.badawi.io/</id>
+  <author>
+    <name><![CDATA[Ismail Badawi]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Read-only file in writable directory]]></title>
+    <link href="http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory/"/>
+    <updated>2016-03-25T21:10:50-04:00</updated>
+    <id>http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory</id>
+    <content type="html"><![CDATA[<p>This is a small gotcha about file permissions I ran into recently.</p>
+
+<p>Let&rsquo;s say there is a file on which you don&rsquo;t have write permission:</p>
+
+<pre><code class="bash">$ ls -l file
+-rw-r--r--  1 notyou  somegroup  68 25 Mar 21:12 file
+</code></pre>
+
+<p>You can&rsquo;t write to this file:</p>
+
+<pre><code class="bash">$ echo "some text" &gt; file
+bash: file: Permission denied
+</code></pre>
+
+<p>However, let&rsquo;s say this file is in a directory on which you do have write
+permission (assuming here that you are in <code>somegroup</code>):</p>
+
+<pre><code class="bash">$ ls -ld .
+drwxrwxr-x  2 notyou  somegroup  68 25 Mar 21:12 dir
+</code></pre>
+
+<p>Now even though you can&rsquo;t modify the file, write permission on the directory
+lets you remove the file and write a new file in its place:</p>
+
+<pre><code class="bash">$ rm file
+$ echo "some text" &gt; file
+</code></pre>
+
+<p>Depending on the situation, this can be just as good. You don&rsquo;t even have to do
+this manually &ndash;
+<a href="https://github.com/vim/vim/blob/1e7885abe8daa793fd9328d0fd6c456214cb467e/src/fileio.c#L4300-L4307">if you&rsquo;re using vim, then <code>:w!</code> will automatically do this if the file is not writable</a>.</p>
+
+<p>I encountered a system at work that would inspect the contents of certain files
+to decide whether to allow certain dangerous operations. These files had
+clearly defined owners that you were meant to get in touch with to ask for
+approval &ndash; if approval was granted, they would edit the relevant files for
+you, so that you could go ahead and do what you needed to do. But since the
+files were set up in this way &ndash; read-only in a group-writable directory &ndash; in
+practice anyone could edit them, bypassing whatever restrictions were in place.</p>
+
+<p>If you&rsquo;re relying on a file being read-only, be mindful of the permissions
+set on any parent directories.</p>
+]]></content>
+  </entry>
+  
+</feed>

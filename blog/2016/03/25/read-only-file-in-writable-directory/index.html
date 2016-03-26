@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Ismail Badawi</title>
+  <title>Read-only File in Writable Directory - Ismail Badawi</title>
   <meta name="author" content="Ismail Badawi">
 
   
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://ismail.badawi.io/">
+  <link rel="canonical" href="http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Ismail Badawi" type="application/atom+xml">
@@ -74,15 +74,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2016/03/25/read-only-file-in-writable-directory/">Read-only File in Writable Directory</a></h1>
+      <h1 class="entry-title">Read-only File in Writable Directory</h1>
     
     
       <p class="meta">
@@ -98,7 +95,7 @@
   </header>
 
 
-  <div class="entry-content"><p>This is a small gotcha about file permissions I ran into recently.</p>
+<div class="entry-content"><p>This is a small gotcha about file permissions I ran into recently.</p>
 
 <p>Let&rsquo;s say there is a file on which you don&rsquo;t have write permission:</p>
 
@@ -153,224 +150,56 @@ practice anyone could edit them, bypassing whatever restrictions were in place.<
 <p>If you&rsquo;re relying on a file being read-only, be mindful of the permissions
 set on any parent directories.</p>
 </div>
-  
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/">A Bug Caused by Using 0 Instead of NULL</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2015-09-08T13:37:49-04:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>1:37 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This is a quick post about a bug I ran into at work which turned out to be
-caused by passing a literal <code>0</code> instead of <code>NULL</code> to a function. Here&rsquo;s a
-small program reproducing it:</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/">Read on &rarr;</a>
-    </footer>
   
 
+<span class="byline author vcard">Posted by <span class="fn">Ismail Badawi</span></span>
 
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/09/07/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
 
-<time class='entry-date' datetime='2015-09-07T21:08:41-04:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:08 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>The past few months at work I&rsquo;ve been working with a large legacy codebase,
-mostly written in C. In order to debug problems as they come up, I wanted to
-use gdb &ndash; but it seemed like the program was only ever compiled with
-optimizations turned on (<code>-O2</code>), which can make using gdb a frustrating
-experience, as every interesting value you might want to examine has been
-optimized out.</p>
-
-<p>After grappling with the build system to pass <code>-O0</code> in all the right places (a
-surprisingly difficult task), I found that the program did not link with
-optimizations turned off. Once I got around that, I ran into a crash in some
-basic functionality, easily reproducible at <code>-O0</code>, but not <code>-O2</code>. This post
-contains two tiny contrived programs reproducing those issues.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/09/07/when-optimizations-hide-bugs/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+<time class='entry-date' datetime='2016-03-25T21:10:50-04:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:10 pm</span></time>
       
-  <header>
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/unix/'>unix</a>
+  
+</span>
+
+
+    </p>
     
-      <h1 class="entry-title"><a href="/blog/2014/04/23/the-compositional-nature-of-vim/">The Compositional Nature of Vim</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-04-23T18:10:22-04:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2014</span></span> <span class='time'>6:10 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I use vim. I&rsquo;ve used vim since I started programming; the very first program I
-wrote &ndash; hello world in C, following along a cprogramming.com tutorial &ndash; was
-typed out in vim, inside a cygwin environment on Windows. Naturally, at first
-it was hard and intimidating. I didn&rsquo;t know how to do anything, least of all
-edit text. I learned about insert mode and normal mode. I learned about
-navigating using <code>hjkl</code>, and deleting the current line with <code>dd</code>, and saving
-and quitting with <code>:wq</code>, and for a long time that was it.</p>
-
+      <div class="sharing">
+  
+  
+  
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/04/23/the-compositional-nature-of-vim/">Read on &rarr;</a>
-    </footer>
-  
 
-
-    </article>
-  
-  
-    <article>
+    
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/02/04/an-obscure-bug-story/">An Obscure Bug Story</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-02-04T02:03:00-05:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>2:03 am</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>It&rsquo;s common to be asked a question like &ldquo;what&rsquo;s the hardest bug you&rsquo;ve debugged?&rdquo;
-at job interviews in tech. This post is about the bug I usually describe.
-The snag is that it&rsquo;s quite involved and I don&rsquo;t actually understand it all the
-way through &ndash; there are one or two aspects to it I often hand-wavingly gloss over.
-The hope was that by writing it out and fact checking it I&rsquo;d have a better handle
-on it; this is what came out.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/02/04/an-obscure-bug-story/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+        <a class="basic-alignment left" href="/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/" title="Previous Post: A bug caused by using 0 instead of NULL">&laquo; A bug caused by using 0 instead of NULL</a>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/05/03/writing-a-code-coverage-tool/">Writing a Code Coverage Tool</a></h1>
-    
-    
-      <p class="meta">
-        
+      
+    </p>
+  </footer>
+</article>
 
-
-
-
-<time class='entry-date' datetime='2013-05-03'><span class='date'><span class='date-month'>May</span> <span class='date-day'>3</span><span class='date-suffix'>rd</span>, <span class='date-year'>2013</span></span> <span class='time'>12:00 am</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><em>Disclaimer: I&rsquo;m not quite sure who the audience is for this. I guess it&rsquo;s
-describing a fun little project I put together, but it&rsquo;s also written kind of
-like a tutorial, so you can maybe follow along. I don&rsquo;t think it&rsquo;s particularly
-beginner-friendly, though. Some knowledge of Java is assumed, but not much.
-The code is available <a href="https://github.com/isbadawi/coverage-example">on github</a>.</em></p>
-
-<p>Code coverage is a software metric that measures how much, and which parts, of the source code
-of a program were exercised in a given execution of that program.
-There are many different flavors of coverage data, for example
-tracking which lines or statements were executed, which
-functions were called, which branches or control flow paths were taken. In
-this post, we&rsquo;ll walk through writing a simplistic coverage collection tool
-for Java.</p>
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013/05/03/writing-a-code-coverage-tool/">Read on &rarr;</a>
-    </footer>
-  
 
-
-    </article>
-  
-  <div class="pagination">
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
-</div>
 <aside class="sidebar">
   
     <section>
@@ -407,6 +236,7 @@ for Java.</p>
   
 </aside>
 
+
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -421,7 +251,10 @@ for Java.</p>
       var disqus_shortname = 'isbadawi';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory/';
+        var disqus_url = 'http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
