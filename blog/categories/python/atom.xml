@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: python | Ismail Badawi]]></title>
+  <link href="http://ismail.badawi.io/blog/categories/python/atom.xml" rel="self"/>
+  <link href="http://ismail.badawi.io/"/>
+  <updated>2016-03-27T14:00:51-04:00</updated>
+  <id>http://ismail.badawi.io/</id>
+  <author>
+    <name><![CDATA[Ismail Badawi]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Unintended StopIteration in a generator]]></title>
+    <link href="http://ismail.badawi.io/blog/2016/03/27/unintended-stopiteration-in-a-generator/"/>
+    <updated>2016-03-27T13:21:53-04:00</updated>
+    <id>http://ismail.badawi.io/blog/2016/03/27/unintended-stopiteration-in-a-generator</id>
+    <content type="html"><![CDATA[<p>Sometimes, if I have a generator that I happen to know is non-empty, and I want
+to get at the first element, I&rsquo;ll write code like this:</p>
+
+<pre><code class="python">output = next(f for f in os.listdir(dir) if f.endswith('.o'))
+</code></pre>
+
+<p>In theory, the intended meaning of this code is something like this:</p>
+
+<pre><code class="python">outputs = [f for f in os.listdir(dir) if f.endswith('.o')]
+assert len(outputs) &gt; 0 # or maybe assert len(outputs) == 1
+output = outputs[0]
+</code></pre>
+
+<p>These two pieces of code are similar, but differ in one important way &ndash; if the
+assumption is wrong (i.e. there is a bug in the program), then the second will
+raise an <code>AssertionError</code>, while the first will raise a <code>StopIteration</code>
+exception. If this code happens to be inside a generator, maybe like this:</p>
+
+<pre><code class="python">def outputs(dirs):
+  for dir in dirs:
+    yield next(f for f in os.listdir(dir) if f.endswith('.o'))
+</code></pre>
+
+<p>Then while an <code>AssertionError</code> would correctly bubble up to the caller, a
+<code>StopIteration</code> exception would instead only prematurely signal that the
+generator is exhausted, and it wouldn&rsquo;t be possible in general for the caller
+to tell that something has gone wrong &ndash; it&rsquo;s likely that the program would
+just keep running and produce wrong results, making the bug potentially much
+less straightforward to track down.</p>
+
+<p>So while using <code>next</code> for this purpose is cute, its behavior in cases like this
+might catch you off guard. If your intention is to communicate an assumption
+you&rsquo;re making, you&rsquo;re probably better off using <code>assert</code>, even if it&rsquo;s slightly
+more long-winded.</p>
+]]></content>
+  </entry>
+  
+</feed>

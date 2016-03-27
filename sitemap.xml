@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://ismail.badawi.io/blog/2016/03/27/unintended-stopiteration-in-a-generator/</loc>
+    <lastmod>2016-03-27T13:21:53-04:00</lastmod>
+  </url>
+  <url>
     <loc>http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory/</loc>
     <lastmod>2016-03-25T21:10:50-04:00</lastmod>
   </url>
@@ -59,6 +63,9 @@
   </url>
   <url>
     <loc>http://ismail.badawi.io/blog/categories/unix/</loc>
+  </url>
+  <url>
+    <loc>http://ismail.badawi.io/blog/categories/python/</loc>
   </url>
   <url>
     <loc>http://ismail.badawi.io/coverage-report/coverage-example/Hello.java.func-sort-c.html</loc>
