@@ -13,6 +13,8 @@ to get at the first element, I'll write code like this:
 output = next(f for f in os.listdir(dir) if f.endswith('.o'))
 ```
 
+<!--more-->
+
 In theory, the intended meaning of this code is something like this:
 
 ```python

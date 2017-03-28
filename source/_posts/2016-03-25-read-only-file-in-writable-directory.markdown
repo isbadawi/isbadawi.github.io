@@ -8,6 +8,8 @@ categories: [unix]
 
 This is a small gotcha about file permissions I ran into recently.
 
+<!--more-->
+
 Let's say there is a file on which you don't have write permission:
 
 ```bash
