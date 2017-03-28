@@ -1,0 +1,552 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Automatic Directory Creation in Make - Ismail Badawi</title>
+  <meta name="author" content="Ismail Badawi">
+
+  
+  <meta name="description" content="I like out-of-tree builds. Out-of-tree builds are nice for lots of reasons. You
+can have multiple builds of the same project coexisting side-by-side &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://ismail.badawi.io/blog/2017/03/28/automatic-directory-creation-in-make/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ismail Badawi" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-40856767-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ismail Badawi</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="sitesearch" value="ismail.badawi.io">
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/about">About</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Automatic Directory Creation in Make</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-03-28T01:14:40-04:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>1:14 am</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>I like out-of-tree builds. Out-of-tree builds are nice for lots of reasons. You
+can have multiple builds of the same project coexisting side-by-side &ndash; for
+example a debug build for development, a release build, and an instrumented
+build for code coverage runs. All the generated build artifacts are together
+underneath one directory which you can easily delete without having to maintain
+a <code>make clean</code> target, or place under <code>.gitignore</code> without having to maintain a
+growing set of patterns for the different kinds of artifacts. I was going to
+write a post about this, but came across
+<a href="http://voices.canonical.com/jussi.pakkanen/2013/04/16/why-you-should-consider-using-separate-build-directories/">this one by Jussi Pakkanen</a> which covers a lot of the
+ground I would have, so I&rsquo;ll just link to it here.</p>
+
+<p>Instead, this post is about an issue that arises when implementing out-of-tree
+builds in make, and the best approach I&rsquo;ve found for dealing with it.</p>
+
+<!--more-->
+
+
+<p>Let&rsquo;s say we have a hypothetical source tree like
+this with source files nested in different directories:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ tree
+</span><span class='line'>.
+</span><span class='line'>├── foo
+</span><span class='line'>│   └── bar
+</span><span class='line'>│       └── baz.c
+</span><span class='line'>├── main.c
+</span><span class='line'>└── util
+</span><span class='line'>    └── log.c
+</span><span class='line'>
+</span><span class='line'>3 directories, 3 files</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We&rsquo;d like our build directory to mirror this structure, like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ tree build
+</span><span class='line'>build
+</span><span class='line'>├── foo
+</span><span class='line'>│   └── bar
+</span><span class='line'>│       └── baz.o
+</span><span class='line'>├── main.o
+</span><span class='line'>├── program
+</span><span class='line'>└── util
+</span><span class='line'>    └── log.o
+</span><span class='line'>
+</span><span class='line'>3 directories, 4 files</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The build system needs to ensure that each subdirectory within the build
+directory exists before we compile the source files inside it. We&rsquo;d like to
+write our makefile to achieve this in a nice way that won&rsquo;t require too much
+maintenance as our project grows. Here&rsquo;s a first attempt:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='make'><span class='line'><span class="nv">BUILD_DIR</span> <span class="o">:=</span> build
+</span><span class='line'>
+</span><span class='line'><span class="nv">SRCS</span> <span class="o">:=</span> main.c foo/bar/baz.c util/log.c
+</span><span class='line'><span class="nv">OBJS</span> <span class="o">:=</span> <span class="k">$(</span>addprefix <span class="k">$(</span>BUILD_DIR<span class="k">)</span>/,<span class="k">$(</span>patsubst %.c,%.o,<span class="k">$(</span>SRCS<span class="k">)))</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">.PHONY</span><span class="o">:</span> <span class="n">program</span>
+</span><span class='line'><span class="nf">program</span><span class="o">:</span> <span class="k">$(</span><span class="nv">BUILD_DIR</span><span class="k">)</span>/<span class="n">program</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/%.o</span><span class="o">:</span> <span class="n">src</span>/%.<span class="n">c</span>
+</span><span class='line'>  mkdir -p <span class="k">$(</span>@D<span class="k">)</span>
+</span><span class='line'>  <span class="k">$(</span>CC<span class="k">)</span> -c <span class="nv">$&lt;</span> -o <span class="nv">$@</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/program</span><span class="o">:</span> <span class="k">$(</span><span class="nv">OBJS</span><span class="k">)</span>
+</span><span class='line'>  mkdir -p <span class="k">$(</span>@D<span class="k">)</span>
+</span><span class='line'>  <span class="k">$(</span>CC<span class="k">)</span> <span class="nv">$^</span> -o <span class="nv">$@</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here <code>$(@D)</code> is an <a href="https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html">automatic variable</a> which expands to the directory part
+of the target path. If we run <code>make program</code>, we get this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>make program
+</span><span class='line'>mkdir -p build
+</span><span class='line'>cc -c src/main.c -o build/main.o
+</span><span class='line'>mkdir -p build/foo/bar
+</span><span class='line'>cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+</span><span class='line'>mkdir -p build
+</span><span class='line'>cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This does what we want, but it&rsquo;s a bit awkward. One issue is that in
+incremental builds, the <code>mkdir</code> steps will be run again, even though the
+directories definitely exist:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>touch src/foo/bar/baz.c
+</span><span class='line'><span class="nv">$ </span>make program
+</span><span class='line'>mkdir -p build/foo/bar
+</span><span class='line'>cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+</span><span class='line'>mkdir -p build
+</span><span class='line'>cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>For this reason, we should instead modify the rule for object files to specify
+the target directory as a prerequisite. In particular, creating directories like
+this is the typical use case for <a href="https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html">order-only prerequisites</a>. So we&rsquo;d like to
+write something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='make'><span class='line'><span class="nf">$(BUILD_DIR)/%.o</span><span class="o">:</span> <span class="n">src</span>/%.<span class="n">c</span> <span class="p">|</span> <span class="k">$(</span>@<span class="nv">D</span><span class="k">)</span>
+</span><span class='line'>  <span class="k">$(</span>CC<span class="k">)</span> -c <span class="nv">$&lt;</span> -o <span class="nv">$@</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One issue here is that automatic variables can&rsquo;t be used within prerequisite
+lists, so that <code>$(@D)</code> will expand to nothing. That is easily fixed by enabling
+<a href="https://www.gnu.org/software/make/manual/html_node/Secondary-Expansion.html">secondary expansion</a>, which is a feature of make whereby the prerequisite
+list is expanded twice, and the second time around, automatic variables are in
+scope. That looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='make'><span class='line'><span class="nf">.SECONDEXPANSION</span><span class="o">:</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/%.o</span><span class="o">:</span> <span class="n">src</span>/%.<span class="n">c</span> <span class="p">|</span> $<span class="k">$(</span>@<span class="nv">D</span><span class="k">)</span>
+</span><span class='line'>  <span class="k">$(</span>CC<span class="k">)</span> -c <span class="nv">$&lt;</span> -o <span class="nv">$@</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We escape the <code>$(@D)</code> reference so that we expand it only during the second expansion.</p>
+
+<p>The next issue with this approach is that there now need to be targets for each
+directory that we&rsquo;ll need (<code>build</code>, <code>build/util</code>, and <code>build/foo/bar</code>). We definitely
+don&rsquo;t want to write these out manually:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='make'><span class='line'><span class="nf">$(BUILD_DIR)</span><span class="o">:</span>
+</span><span class='line'>  mkdir -p <span class="nv">$@</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/util</span><span class="o">:</span>
+</span><span class='line'>  mkdir -p <span class="nv">$@</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/bar/baz</span><span class="o">:</span>
+</span><span class='line'>  mkdir -p <span class="nv">$@</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One option is to define a template and evaluate it for each object file:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='make'><span class='line'><span class="cp">define define_mkdir_target</span>
+</span><span class='line'><span class="nf">$(1)</span><span class="o">:</span>
+</span><span class='line'>  mkdir -p <span class="k">$(</span>1<span class="k">)</span>
+</span><span class='line'><span class="cp">endef</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">$(</span><span class="nv">foreach</span> <span class="nv">dir</span>,<span class="k">$</span>(<span class="nv">sort</span> <span class="k">$</span>(<span class="nv">dir</span> <span class="k">$</span>(<span class="nv">OBJS</span><span class="k">)</span><span class="err">)),</span><span class="k">$(</span><span class="nv">eval</span> <span class="k">$</span>(<span class="nv">call</span> <span class="nv">define_mkdir_target</span>,<span class="k">$</span>(<span class="nv">dir</span><span class="k">)</span><span class="err">)))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is a bit hairy &ndash; we call <code>$(dir $(OBJS))</code> to extract the directory part
+of each object path, and then call <code>$(sort)</code> to filter out duplicates, because
+we don&rsquo;t want to define multiple rules for the same directory if there are
+multiple files in it. Then we evaluate the template for each directory we end
+up with, defining a target for each.</p>
+
+<p>This does everything we want and works correctly with incremental builds. It&rsquo;s
+good enough for this toy example because we have this handy <code>$(OBJS)</code> variable
+that has all of our targets in it, so we can do this once and forget about it.
+In more complicated projects, we may have many different kinds of targets
+defined in many different places, such that making sure we evaluate this
+template for all of them is a maintenance burden.</p>
+
+<p>What would be nicer is to define a <a href="https://www.gnu.org/software/make/manual/html_node/Pattern-Rules.html">pattern rule</a> in order to match any
+directory. There isn&rsquo;t really a way to do this for real, but we can cheat a bit
+by defining a naming convention; we&rsquo;ll make sure to always use a trailing slash
+when referring to a directory. Then we can write this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='make'><span class='line'><span class="nf">.PRECIOUS</span><span class="o">:</span> <span class="k">$(</span><span class="nv">BUILD_DIR</span><span class="k">)</span>/ <span class="k">$(</span><span class="nv">BUILD_DIR</span><span class="k">)</span>%/
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/</span><span class="o">:</span>
+</span><span class='line'>  mkdir -p <span class="nv">$@</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)%/</span><span class="o">:</span>
+</span><span class='line'>  mkdir -p <span class="nv">$@</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/%.o</span><span class="o">:</span> <span class="n">src</span>/%.<span class="n">c</span> <span class="p">|</span> $<span class="k">$(</span>@<span class="nv">D</span><span class="k">)</span>/
+</span><span class='line'>  <span class="k">$(</span>CC<span class="k">)</span> -c <span class="nv">$&lt;</span> -o <span class="nv">$@</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We need both the first and second targets because the <code>%</code> in a pattern rule
+won&rsquo;t match an empty string. And for reasons I don&rsquo;t fully understand, make
+seems to treat the directories as intermediate files and tries to delete them
+(unsuccessfully, since they&rsquo;re not empty) after the build is done, so we mark
+both targets as <code>.PRECIOUS</code> to get around this. But that&rsquo;s all we ever need &ndash;
+as we grow our project and add new build rules for different kinds of
+artifacts, everything will work as expected as long as we specify <code>$$(@D)/</code> as
+an order-only prerequisite for every target.</p>
+
+<p>One last little snag is that this doesn&rsquo;t work in make 3.81. There, the
+trailing slash in the prerequisite is apparently ignored, so our pattern rule
+doesn&rsquo;t match. For <a href="https://savannah.gnu.org/bugs/index.php?33034">historical reasons</a>, 3.81 was quite a
+long-lived release of make and is the default version of make available in many
+Linux distributions, as well as the version that ships with OS X, so we may
+want to support it.</p>
+
+<p>We can work around the make 3.81 behavior by changing our naming convention to
+also include a trailing <code>.</code>. While this looks a bit funny, it doesn&rsquo;t change
+the path being referred to, and make 3.81 won&rsquo;t strip it out. So our final
+Makefile looks like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='make'><span class='line'><span class="nv">BUILD_DIR</span> <span class="o">:=</span> build
+</span><span class='line'>
+</span><span class='line'><span class="nv">SRCS</span> <span class="o">:=</span> main.c foo/bar/baz.c util/log.c
+</span><span class='line'><span class="nv">OBJS</span> <span class="o">:=</span> <span class="k">$(</span>addprefix <span class="k">$(</span>BUILD_DIR<span class="k">)</span>/,<span class="k">$(</span>patsubst %.c,%.o,<span class="k">$(</span>SRCS<span class="k">)))</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">.PHONY</span><span class="o">:</span> <span class="n">program</span>
+</span><span class='line'><span class="nf">program</span><span class="o">:</span> <span class="k">$(</span><span class="nv">BUILD_DIR</span><span class="k">)</span>/<span class="n">program</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">.PRECIOUS</span><span class="o">:</span> <span class="k">$(</span><span class="nv">BUILD_DIR</span><span class="k">)</span>/. <span class="k">$(</span><span class="nv">BUILD_DIR</span><span class="k">)</span>%/.
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/.</span><span class="o">:</span>
+</span><span class='line'>  mkdir -p <span class="nv">$@</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)%/.</span><span class="o">:</span>
+</span><span class='line'>  mkdir -p <span class="nv">$@</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">.SECONDEXPANSION</span><span class="o">:</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/%.o</span><span class="o">:</span> <span class="n">src</span>/%.<span class="n">c</span> <span class="p">|</span> $<span class="k">$(</span>@<span class="nv">D</span><span class="k">)</span>/.
+</span><span class='line'>  <span class="k">$(</span>CC<span class="k">)</span> -c <span class="nv">$&lt;</span> -o <span class="nv">$@</span>
+</span><span class='line'>
+</span><span class='line'><span class="nf">$(BUILD_DIR)/program</span><span class="o">:</span> <span class="k">$(</span><span class="nv">OBJS</span><span class="k">)</span>
+</span><span class='line'>  <span class="k">$(</span>CC<span class="k">)</span> <span class="nv">$^</span> -o <span class="nv">$@</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Ismail Badawi</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2017-03-28T01:14:40-04:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>1:14 am</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/code/'>code</a>, <a class='category' href='/blog/categories/make/'>make</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2016/03/27/unintended-stopiteration-in-a-generator/" title="Previous Post: Unintended StopIteration in a generator">&laquo; Unintended StopIteration in a generator</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2017/03/28/automatic-directory-creation-in-make/">Automatic Directory Creation in Make</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2016/03/27/unintended-stopiteration-in-a-generator/">Unintended StopIteration in a Generator</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2016/03/25/read-only-file-in-writable-directory/">Read-only File in Writable Directory</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/08/a-bug-caused-by-using-0-instead-of-null/">A Bug Caused by Using 0 Instead of NULL</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/07/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2017 - Ismail Badawi -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'isbadawi';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://ismail.badawi.io/blog/2017/03/28/automatic-directory-creation-in-make/';
+        var disqus_url = 'http://ismail.badawi.io/blog/2017/03/28/automatic-directory-creation-in-make/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

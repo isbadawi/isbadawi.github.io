@@ -4,7 +4,7 @@
   <title><![CDATA[Category: code | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/code/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2016-03-27T14:00:51-04:00</updated>
+  <updated>2017-03-28T03:39:07-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -12,6 +12,229 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Automatic directory creation in Make]]></title>
+    <link href="http://ismail.badawi.io/blog/2017/03/28/automatic-directory-creation-in-make/"/>
+    <updated>2017-03-28T01:14:40-04:00</updated>
+    <id>http://ismail.badawi.io/blog/2017/03/28/automatic-directory-creation-in-make</id>
+    <content type="html"><![CDATA[<p>I like out-of-tree builds. Out-of-tree builds are nice for lots of reasons. You
+can have multiple builds of the same project coexisting side-by-side &ndash; for
+example a debug build for development, a release build, and an instrumented
+build for code coverage runs. All the generated build artifacts are together
+underneath one directory which you can easily delete without having to maintain
+a <code>make clean</code> target, or place under <code>.gitignore</code> without having to maintain a
+growing set of patterns for the different kinds of artifacts. I was going to
+write a post about this, but came across
+<a href="http://voices.canonical.com/jussi.pakkanen/2013/04/16/why-you-should-consider-using-separate-build-directories/">this one by Jussi Pakkanen</a> which covers a lot of the
+ground I would have, so I&rsquo;ll just link to it here.</p>
+
+<p>Instead, this post is about an issue that arises when implementing out-of-tree
+builds in make, and the best approach I&rsquo;ve found for dealing with it.</p>
+
+<!--more-->
+
+
+<p>Let&rsquo;s say we have a hypothetical source tree like
+this with source files nested in different directories:</p>
+
+<pre><code>$ tree
+.
+├── foo
+│   └── bar
+│       └── baz.c
+├── main.c
+└── util
+    └── log.c
+
+3 directories, 3 files
+</code></pre>
+
+<p>We&rsquo;d like our build directory to mirror this structure, like this:</p>
+
+<pre><code>$ tree build
+build
+├── foo
+│   └── bar
+│       └── baz.o
+├── main.o
+├── program
+└── util
+    └── log.o
+
+3 directories, 4 files
+</code></pre>
+
+<p>The build system needs to ensure that each subdirectory within the build
+directory exists before we compile the source files inside it. We&rsquo;d like to
+write our makefile to achieve this in a nice way that won&rsquo;t require too much
+maintenance as our project grows. Here&rsquo;s a first attempt:</p>
+
+<pre><code class="make">BUILD_DIR := build
+
+SRCS := main.c foo/bar/baz.c util/log.c
+OBJS := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
+
+.PHONY: program
+program: $(BUILD_DIR)/program
+
+$(BUILD_DIR)/%.o: src/%.c
+    mkdir -p $(@D)
+    $(CC) -c $&lt; -o $@
+
+$(BUILD_DIR)/program: $(OBJS)
+    mkdir -p $(@D)
+    $(CC) $^ -o $@
+</code></pre>
+
+<p>Here <code>$(@D)</code> is an <a href="https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html">automatic variable</a> which expands to the directory part
+of the target path. If we run <code>make program</code>, we get this:</p>
+
+<pre><code class="bash">$ make program
+mkdir -p build
+cc -c src/main.c -o build/main.o
+mkdir -p build/foo/bar
+cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+mkdir -p build
+cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
+</code></pre>
+
+<p>This does what we want, but it&rsquo;s a bit awkward. One issue is that in
+incremental builds, the <code>mkdir</code> steps will be run again, even though the
+directories definitely exist:</p>
+
+<pre><code class="bash">$ touch src/foo/bar/baz.c
+$ make program
+mkdir -p build/foo/bar
+cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+mkdir -p build
+cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
+</code></pre>
+
+<p>For this reason, we should instead modify the rule for object files to specify
+the target directory as a prerequisite. In particular, creating directories like
+this is the typical use case for <a href="https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html">order-only prerequisites</a>. So we&rsquo;d like to
+write something like this:</p>
+
+<pre><code class="make">$(BUILD_DIR)/%.o: src/%.c | $(@D)
+    $(CC) -c $&lt; -o $@
+</code></pre>
+
+<p>One issue here is that automatic variables can&rsquo;t be used within prerequisite
+lists, so that <code>$(@D)</code> will expand to nothing. That is easily fixed by enabling
+<a href="https://www.gnu.org/software/make/manual/html_node/Secondary-Expansion.html">secondary expansion</a>, which is a feature of make whereby the prerequisite
+list is expanded twice, and the second time around, automatic variables are in
+scope. That looks like this:</p>
+
+<pre><code class="make">.SECONDEXPANSION:
+
+$(BUILD_DIR)/%.o: src/%.c | $$(@D)
+    $(CC) -c $&lt; -o $@
+</code></pre>
+
+<p>We escape the <code>$(@D)</code> reference so that we expand it only during the second expansion.</p>
+
+<p>The next issue with this approach is that there now need to be targets for each
+directory that we&rsquo;ll need (<code>build</code>, <code>build/util</code>, and <code>build/foo/bar</code>). We definitely
+don&rsquo;t want to write these out manually:</p>
+
+<pre><code class="make">$(BUILD_DIR):
+    mkdir -p $@
+
+$(BUILD_DIR)/util:
+    mkdir -p $@
+
+$(BUILD_DIR)/bar/baz:
+    mkdir -p $@
+</code></pre>
+
+<p>One option is to define a template and evaluate it for each object file:</p>
+
+<pre><code class="make">define define_mkdir_target
+$(1):
+    mkdir -p $(1)
+endef
+
+$(foreach dir,$(sort $(dir $(OBJS))),$(eval $(call define_mkdir_target,$(dir))))
+</code></pre>
+
+<p>This is a bit hairy &ndash; we call <code>$(dir $(OBJS))</code> to extract the directory part
+of each object path, and then call <code>$(sort)</code> to filter out duplicates, because
+we don&rsquo;t want to define multiple rules for the same directory if there are
+multiple files in it. Then we evaluate the template for each directory we end
+up with, defining a target for each.</p>
+
+<p>This does everything we want and works correctly with incremental builds. It&rsquo;s
+good enough for this toy example because we have this handy <code>$(OBJS)</code> variable
+that has all of our targets in it, so we can do this once and forget about it.
+In more complicated projects, we may have many different kinds of targets
+defined in many different places, such that making sure we evaluate this
+template for all of them is a maintenance burden.</p>
+
+<p>What would be nicer is to define a <a href="https://www.gnu.org/software/make/manual/html_node/Pattern-Rules.html">pattern rule</a> in order to match any
+directory. There isn&rsquo;t really a way to do this for real, but we can cheat a bit
+by defining a naming convention; we&rsquo;ll make sure to always use a trailing slash
+when referring to a directory. Then we can write this:</p>
+
+<pre><code class="make">.PRECIOUS: $(BUILD_DIR)/ $(BUILD_DIR)%/
+
+$(BUILD_DIR)/:
+    mkdir -p $@
+
+$(BUILD_DIR)%/:
+    mkdir -p $@
+
+$(BUILD_DIR)/%.o: src/%.c | $$(@D)/
+    $(CC) -c $&lt; -o $@
+</code></pre>
+
+<p>We need both the first and second targets because the <code>%</code> in a pattern rule
+won&rsquo;t match an empty string. And for reasons I don&rsquo;t fully understand, make
+seems to treat the directories as intermediate files and tries to delete them
+(unsuccessfully, since they&rsquo;re not empty) after the build is done, so we mark
+both targets as <code>.PRECIOUS</code> to get around this. But that&rsquo;s all we ever need &ndash;
+as we grow our project and add new build rules for different kinds of
+artifacts, everything will work as expected as long as we specify <code>$$(@D)/</code> as
+an order-only prerequisite for every target.</p>
+
+<p>One last little snag is that this doesn&rsquo;t work in make 3.81. There, the
+trailing slash in the prerequisite is apparently ignored, so our pattern rule
+doesn&rsquo;t match. For <a href="https://savannah.gnu.org/bugs/index.php?33034">historical reasons</a>, 3.81 was quite a
+long-lived release of make and is the default version of make available in many
+Linux distributions, as well as the version that ships with OS X, so we may
+want to support it.</p>
+
+<p>We can work around the make 3.81 behavior by changing our naming convention to
+also include a trailing <code>.</code>. While this looks a bit funny, it doesn&rsquo;t change
+the path being referred to, and make 3.81 won&rsquo;t strip it out. So our final
+Makefile looks like this:</p>
+
+<pre><code class="make">BUILD_DIR := build
+
+SRCS := main.c foo/bar/baz.c util/log.c
+OBJS := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
+
+.PHONY: program
+program: $(BUILD_DIR)/program
+
+.PRECIOUS: $(BUILD_DIR)/. $(BUILD_DIR)%/.
+
+$(BUILD_DIR)/.:
+    mkdir -p $@
+
+$(BUILD_DIR)%/.:
+    mkdir -p $@
+
+.SECONDEXPANSION:
+
+$(BUILD_DIR)/%.o: src/%.c | $$(@D)/.
+    $(CC) -c $&lt; -o $@
+
+$(BUILD_DIR)/program: $(OBJS)
+    $(CC) $^ -o $@
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Unintended StopIteration in a generator]]></title>
@@ -23,6 +246,9 @@ to get at the first element, I&rsquo;ll write code like this:</p>
 
 <pre><code class="python">output = next(f for f in os.listdir(dir) if f.endswith('.o'))
 </code></pre>
+
+<!--more-->
+
 
 <p>In theory, the intended meaning of this code is something like this:</p>
 
@@ -461,645 +687,6 @@ the &ldquo;real&rdquo; versions of classes.</p>
 However, for whatever reason, the GWT-emulated version was not kept in sync with these changes. So the GWT-emulated
 version still had that method, and this was why the regular test run, which ran against the emulated classes, passed.
 The coverage run, which ran against the &ldquo;real&rdquo; Guava, failed.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Writing a code coverage tool]]></title>
-    <link href="http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool/"/>
-    <updated>2013-05-03T00:00:00-04:00</updated>
-    <id>http://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool</id>
-    <content type="html"><![CDATA[<p><em>Disclaimer: I&rsquo;m not quite sure who the audience is for this. I guess it&rsquo;s
-describing a fun little project I put together, but it&rsquo;s also written kind of
-like a tutorial, so you can maybe follow along. I don&rsquo;t think it&rsquo;s particularly
-beginner-friendly, though. Some knowledge of Java is assumed, but not much.
-The code is available <a href="https://github.com/isbadawi/coverage-example">on github</a>.</em></p>
-
-<p>Code coverage is a software metric that measures how much, and which parts, of the source code
-of a program were exercised in a given execution of that program.
-There are many different flavors of coverage data, for example
-tracking which lines or statements were executed, which
-functions were called, which branches or control flow paths were taken. In
-this post, we&rsquo;ll walk through writing a simplistic coverage collection tool
-for Java.</p>
-
-<!--more-->
-
-
-<p>The typical way code coverage is measured is by taking the input program
-and instrumenting it so that as it executes, it records somewhere which parts
-are executing. For simplicity, we&rsquo;ll focus on line coverage. In that case,
-the instrumented code might maintain a little table in memory, mapping
-file names and line numbers to booleans representing whether that line
-in that file has been executed. As each statement is executed, the appropriate
-entry in the table will be updated.</p>
-
-<p>Here&rsquo;s a simple example, the standard hello world in Java:</p>
-
-<pre><code class="java A contrived example class.">package io.badawi.hello;
-
-public class Hello {
-  public static void main(String[] args) {
-    System.out.println("hello, world");
-  }
-}
-</code></pre>
-
-<p>We&rsquo;d like to rewrite this so that after it&rsquo;s done executing, it will have
-produced a little coverage report in a text file, saying that line 5 was
-executed. The rewritten class might look like this:</p>
-
-<pre><code class="java The same class, primed for code coverage.">package io.badawi.hello;
-
-import io.badawi.coverage.runtime.CoverageTracker;
-
-public class Hello {
-  public static void main(String[] args) {
-    System.out.println("hello, world");
-    CoverageTracker.markExecuted("/path/to/Hello.java", 5);
-
-    CoverageTracker.writeCoverageToFile();
-  }
-}
-</code></pre>
-
-<p>Straightforward, right?  After a line executes, we mark it as executed.
-Then, before the program exits, we write out the coverage information somewhere.
-Getting a coverage tool to generate this code automatically might be a
-bit involved, but conceptually what we&rsquo;re doing should be easy to understand.</p>
-
-<p>The implementation of <code>CoverageTracker</code> could be as simple as this:</p>
-
-<pre><code class="java The coverage tracker.">package io.badawi.coverage.runtime;
-
-import java.util.Map;
-import java.util.HashMap;
-
-public class CoverageTracker {
-  // Maps filenames and line numbers to true (executed) or false (not executed).
-  private static Map&lt;String, Map&lt;Integer, Boolean&gt;&gt; coverage =
-      new HashMap&lt;String, Map&lt;Integer, Boolean&gt;&gt;();
-
-  // Serializes coverage in some format; we'll revisit this.
-  public static void writeCoverageToFile() { }
-
-  public static void markExecuted(String filename, int line) {
-    if (!coverage.contains(filename)) {
-      coverage.put(filename, new HashMap&lt;Integer, Boolean&gt;());
-    }
-    coverage.get(filename).put(line, true);  
-  }
-}
-</code></pre>
-
-<p>(n.b: although we&rsquo;ll use Guava in other parts of the code,
-<code>CoverageTracker</code> is used by the instrumented code, and it might be
-awkward to add a runtime dependency on Guava just to save a few lines of code here.
-This is why I&rsquo;m using a <code>Map&lt;String, Map&lt;Integer, Boolean&gt;&gt;</code> instead
-of a <code>Table&lt;String, Integer, Boolean&gt;</code>).</p>
-
-<p>There is just a slight problem. In general, we can&rsquo;t really know ahead of time when or where
-a program will terminate, so it won&rsquo;t do to just call <code>writeCoverageToFile</code> at the end of
-<code>main</code>. The easiest way to ensure the coverage report is always generated to put the
-call to <code>writeCoverageToFile</code> inside a JVM shutdown hook, so we can add this static initializer
-block to <code>CoverageTracker</code>, and drop the calls in the instrumented code:</p>
-
-<pre><code class="java Write coverage to file on shutdown.">static {
-  Runtime.getRuntime().addShutdownHook(new Thread() {
-    @Override public void run() {
-      writeCoverageToFile();
-    }
-  });
-}
-</code></pre>
-
-<h2>Instrumenting code</h2>
-
-<p>So far so good, but how do we actually do this rewriting automatically?
-We need a solution that allows us to insert method calls at the right
-place.</p>
-
-<p>The wrong way to do this is to use some complicated regex-based solution.
-The right way to do this is to parse the code, and work with an
-abstract syntax tree representation. That way, we can work at the level
-of statements and expressions, and not the level of lines in a file, so
-manipulating the program will be simpler. We can transform the syntax tree
-as we see fit and pretty-print (or unparse) it to get back corresponding
-source code.</p>
-
-<h2>Aside: javaparser</h2>
-
-<p>Writing a parser for a language like Java is way outside the scope of this
-blog post. Instead, we&rsquo;ll use a library. There are a few of these for most
-languages; if not, you can probably find a parser generator and a complete
-grammar. I&rsquo;m going to use <a href="https://github.com/matozoid/javaparser">javaparser</a>, mostly for simplicity;
-it looks nice and standalone. The main downside is it only supports Java 1.5.
-The documentation is also kind of scarce.</p>
-
-<p>The hello world example for javaparser might look like this:</p>
-
-<pre><code class="java Parse a class and pretty-print it using javaparser.">package io.badawi.hello;
-
-import japa.parser.JavaParser;
-import japa.parser.ParseException;
-import japa.parser.ast.CompilationUnit;
-
-import java.io.StringReader;
-
-public class HelloJavaparser {
-  public static void main(String[] args) throws ParseException {
-    CompilationUnit unit = JavaParser.parse(new StringReader(new StringBuilder()
-        .append("package io.badawi.hello;\n\n")
-        .append("public class Hello {\n")
-        .append("  public static void main(String[] args) {\n")
-        .append("    System.out.println(\"hello, world\");\n")
-        .append("  }\n")
-        .append("}\n").toString()));
-
-    System.out.println(unit.toString());
-  }
-}
-</code></pre>
-
-<p>It parses a source file (given here as a string), and gets at an object
-of type <code>CompilationUnit</code>, which is the root of the abstract syntax tree representation.
-Each node in the tree overrides <code>toString()</code> to do pretty-printing, so running this just
-spits out the class declaration for <code>Hello</code>:</p>
-
-<pre><code class="text The output.">package io.badawi.hello;
-
-public class Hello {
-
-    public static void main(String[] args) {
-        System.out.println("hello, world");
-    }
-}
-</code></pre>
-
-<p>Going slightly further, we&rsquo;ll modify this example to add a statement
-to the main method before getting the text back. It looks like this:</p>
-
-<pre><code class="java Modify the class a bit before generating code.">package io.badawi.hello;
-
-// snip imports
-
-public class HelloJavaparser {
-  public static void main(String[] args) throws ParseException {
-    CompilationUnit unit = JavaParser.parse(new StringReader(new StringBuilder()
-        .append("package io.badawi.hello;\n\n")
-        .append("public class Hello {\n")
-        .append("  public static void main(String[] args) {\n")
-        .append("    System.out.println(\"hello, world\");\n")
-        .append("  }\n")
-        .append("}\n").toString()));
-
-    // Create an AST fragment representing System.out.println("hello, javaparser")
-    NameExpr systemOut = ASTHelper.createNameExpr("System.out");
-    MethodCallExpr call = new MethodCallExpr(systemOut, "println");
-    ASTHelper.addArgument(call, new StringLiteralExpr("hello, javaparser"));
-
-    // Add this statement to the main method
-    TypeDeclaration helloClass = unit.getTypes().get(0);
-    MethodDeclaration mainMethod = (MethodDeclaration) hello.getMembers().get(0);
-    ASTHelper.addStmt(mainMethod.getBody(), call);
-
-    System.out.println(unit.toString());
-  }
-}
-</code></pre>
-
-<p>By creating AST nodes and connecting them together, we can synthesize new code. Here,
-we create the <code>System.out.println("hello, javaparser")</code> method call by creating a
-<code>MethodCallExpr</code> node that has <code>System.out</code> as a receiver, <code>println</code> as the method name,
-and the string literal <code>"hello, javaparser"</code> as argument.</p>
-
-<p>Starting with the <code>CompilationUnit</code> object, we can navigate the code programmatically,
-and so get at the <code>MethodDeclaration</code> object corresponding to the <code>main</code> method; from
-there, we can get at the body, which is a <code>Block</code> object containing a list of statements,
-and add our newly created statement to it.</p>
-
-<p>(javaparser has this annoying thing where it initializes collections to <code>null</code> instead of using
-empty collections. The <code>ASTHelper.addStmt</code> method adds a statement to a block, making
-sure to create the list if it&rsquo;s null. Similarly <code>ASTHelper.addArgument</code> does the same for
-argument lists of method calls. These functions shouldn&rsquo;t be necessary but that&rsquo;s how the API is.)</p>
-
-<p>Running this spits out the following class:</p>
-
-<pre><code class="text The output.">package io.badawi.hello;
-
-public class Hello {
-
-    public static void main(String[] args) {
-        System.out.println("hello, world");
-        System.out.println("hello, javaparser");
-    }
-}
-</code></pre>
-
-<p>which is what we wanted.</p>
-
-<p>Okay, so now we know how to parse Java code and get an AST, how to unparse an AST and get back
-Java code, and the basics of how to synthesize new code and modify the AST. Now what we&rsquo;ll want
-to do is something like &ldquo;for every statement, do X&rdquo;.
-To achieve this, javaparser has the AST nodes implement <a href="http://en.wikipedia.org/wiki/Visitor_pattern">the Visitor pattern</a>;
-this is nice because we don&rsquo;t have to manually traverse the tree and do <code>instanceof</code> checks or whatever;
-we can just implement an interface that specifies what we want to do when we encounter each kind of node,
-and the visitor machinery will take care of traversing and dispatching.</p>
-
-<p>For example, we could replace the <code>System.out.println(unit.toString());</code> at the end of the last
-example with this:</p>
-
-<pre><code class="java Method call visitor.">unit.accept(new VoidVisitorAdapter&lt;Object&gt;() {
-  @Override public void visit(MethodCallExpr node, Object arg) {
-    System.out.println("found method call: " + node.toString());
-  }
-}, null);
-</code></pre>
-
-<p><code>accept</code> takes care of traversing the AST,
-the given visitor. Here, we just pretty-print every method call we
-see, so the output is:</p>
-
-<pre><code class="text The output.">found method call: System.out.println("hello, world")
-found method call: System.out.println("hello, javaparser")
-</code></pre>
-
-<p>(n.b. All the <code>Visitor</code> classes have a generic type parameter; each <code>visit</code> method
-takes an extra argument of that type, and the <code>accept</code> method also takes
-a value of that type and passes it around everywhere.
-I guess this can be useful to pass around state that is
-built up during the traversal, but for complicated visitors I tend to use
-a proper, non-anonymous class, and use member variables to keep state. So
-here and in what follows I&rsquo;ll always use <code>Object</code> as the type parameter, pass
-in <code>null</code> to <code>accept</code>, and ignore the extra argument to the <code>visit</code> methods.)</p>
-
-<h2>Back to instrumentation</h2>
-
-<p>Now what we&rsquo;re looking to do is traverse the tree, find all the statements,
-and insert our coverage tracking statements after them. (To start with, we&rsquo;ll
-only handle expression statements, since that&rsquo;s the only kind of statement that
-appears in the hello world example.)</p>
-
-<p>This isn&rsquo;t as straightforward as it sounds, because if we do this naively
-&ndash; given a statement in the tree, walk up the tree to find the statement
-list containing it, and insert our coverage tracking statement after it
-&ndash; we&rsquo;d be modifying lists of statements as we&rsquo;re iterating over them, which
-causes trouble.</p>
-
-<p>javaparser already contains infrastructure to modify ASTs, in the form of a special
-visitor implementation called <code>ModifierVisitorAdapter</code>, which has each <code>visit</code>
-method return an AST node to serve as the replacement for the current node. So we can replace an
-arbitrary node with another. We can use this facility to emulate inserting a statement
-after the current statement; just replace the statement with a block statement
-containing it and its new successor.</p>
-
-<p>Given this, here&rsquo;s a first go at instrumenting our hello world example:</p>
-
-<pre><code class="java A first go at instrumenting code.">package io.badawi.coverage;
-
-// snip imports
-
-public class CoverageVisitor extends ModifierVisitorAdapter&lt;Object&gt; {
-  // AST nodes don't know which file they come from, so we'll pass the information in
-  private String filename;
-
-  public CoverageVisitor(String filename) {
-    this.filename = filename;
-  }
-
-  @Override
-  public Node visit(ExpressionStmt node, Object arg) {
-    BlockStmt block = new BlockStmt();
-    ASTHelper.addStmt(block, n);
-    ASTHelper.addStmt(block, makeCoverageTrackingCall(filename, node.getBeginLine()));
-    return block;
-  }
-
-  private Statement makeCoverageTrackingCall(String filename, int line) {
-    NameExpr coverageTracker = ASTHelper.createNameExpr("io.badawi.coverage.runtime.CoverageTracker");
-    MethodCallExpr call = new MethodCallExpr(coverageTracker, "markExecuted");
-    ASTHelper.addArgument(call, new StringLiteralExpr(filename));
-    ASTHelper.addArgument(call, new IntegerLiteralExpr(String.valueOf(line)));
-    return new ExpressionStmt(call);
-  }
-}
-</code></pre>
-
-<ul>
-<li>The key point here is that parsers retain information about the positions (line and column offsets)
-of AST nodes, typically to generate useful error messages. The call to <code>node.getBeginLine()</code> returns
-the line in the file where the code fragment corresponding to that node begins.</li>
-<li>The path of the source file can&rsquo;t be known in general (because we could be parsing an arbitrary string, as we did above), so we
-pass it in ourselves.</li>
-<li><code>makeCoverageTrackingCall</code> just creates a call to <code>markExecuted</code>, with the filename and line number
-as arguments. Note that we insert the fully qualified name of <code>CoverageTracker</code> there instead of adding
-an import; this wards against the case where the subject code is already using the name <code>CoverageTracker</code>.</li>
-<li>The <code>visit</code> method runs whenever the traversal encounters an expression statement
-(for example, a standalone method call) and returns a block statement containing the original statement,
-followed by the call to <code>markExecuted</code>.</li>
-</ul>
-
-
-<p>We can equip this class with a <code>main</code> method similar to our previous examples:</p>
-
-<pre><code class="java The main method.">public static void main(String[] args) throws ParseException {
-  CompilationUnit unit = JavaParser.parse(new StringReader(new StringBuilder()
-      .append("package io.badawi.hello;\n\n")
-      .append("public class Hello {\n")
-      .append("  public static void main(String[] args) {\n")
-      .append("    System.out.println(\"hello, world\");\n")
-      .append("  }\n")
-      .append("}\n").toString()));
-
-  unit.accept(new CoverageVisitor("/path/to/Hello.java"), null);
-
-  System.out.println(unit.toString());
-}
-</code></pre>
-
-<p>Running this prints out</p>
-
-<pre><code class="text The output.">package io.badawi.hello;
-
-public class Hello {
-
-     public static void main(String[] args) {
-         {
-             System.out.println("hello, world");
-             io.badawi.coverage.runtime.CoverageTracker.markExecuted("/path/to/Hello.java", 5);
-         }
-     }
-}
-</code></pre>
-
-<p>which is what we wanted.</p>
-
-<h2>Baseline coverage</h2>
-
-<p>Let&rsquo;s go back to our hello world example for a bit. Notice that even though there are seven
-lines in this file, we really only care about line 5. Line 5 is the only executable line;
-the rest are noise.  If line 5 is executed, logically we should say 100% of the class was covered
-(as opposed to 14.28%, or 1/7). It&rsquo;s not quite enough, then, to know that line
-5 was executed; to produce an accurate coverage report, we have
-to know also which lines <em>could</em> have been executed (in this case, only line 5).
-In doing this, we&rsquo;ll want to ignore things like package declarations, imports,
-blank lines, comments and so on.</p>
-
-<p>Given what we have so far, how do we do this? Which lines are executable?
-It should be easy enough to see that the executable lines are precisely those lines for which
-we&rsquo;ve created a <code>markExecuted</code> call. We can reuse our <code>CoverageTracker</code> and just mark the line
-as executable at that point:</p>
-
-<pre><code class="java Keep track of executable lines.">private Statement makeCoverageTrackingCall(String filename, int line) {
-  CoverageTracker.markExecutable(filename, line);
-  // same as before
-}
-</code></pre>
-
-<p>where <code>markExecutable</code> is implemented the same way as <code>markExecuted</code>, only with <code>false</code>
-instead of <code>true</code>:</p>
-
-<pre><code class="java Implementation of markExecutable.">
-public static void markExecutable(String filename, int line) {
-  if (!coverage.contains(filename)) {
-    coverage.put(filename, new HashMap&lt;Integer, Boolean&gt;());
-  }
-  coverage.get(filename).put(line, false);
-}   
-</code></pre>
-
-<p>Then the coverage report will be generated via the same shutdown hook we added earlier (but
-at instrumentation time, not a runtime).</p>
-
-<h2>Generating a coverage report</h2>
-
-<p>We&rsquo;re going to generate our report in lcov format. This format is
-understood by tools like <code>lcov</code> and <code>genhtml</code>, which can use it to
-spit out a nice HTML report where the source code is annotated
-with colors that show which lines were executed.</p>
-
-<p>The format isn&rsquo;t very complicated. It consists of a series of records,
-one for each source file. Within each record, you specify which lines
-were executed. You can also specify things like function and branch
-coverage, but we won&rsquo;t use those features.</p>
-
-<p>An lcov record for our hello world example might look like</p>
-
-<pre><code class="text An lcov record.">SF:/path/to/Hello.java
-DA:3,1
-end_of_record
-</code></pre>
-
-<p>The <code>SF</code> line signals the start of a new record for the source file
-at the given path, and <code>end_of_record</code> (obviously) signals the end
-of the record. For each executable line, a <code>DA</code> line specifies the
-line number and the number of times that line was executed. In our case,
-since we&rsquo;re only tracking whether a line was executed and not how many
-times, we&rsquo;ll only ever put a 1 or 0 there. It wouldn&rsquo;t be difficult to
-change the <code>CoverageTracker</code> implements to keep a count, though.</p>
-
-<p>With that in mind, generating a coverage report is straightforward
-and looks like this.</p>
-
-<pre><code class="java Generating the coverage report.">private static void writeCoverageToFile() {
-  String lcovCoverage = generateLcov();
-  String coverageReportPath = System.getProperty("coverage.report.path", "coverage_report.lcov");
-  FileWriter writer = null;
-  try {
-    writer = new FileWriter(coverageReportPath);
-    writer.write(lcovCoverage);
-  } catch (IOException e) {
-    throw new RuntimeException(e);
-  } finally {
-    try {
-      writer.close();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-}
-
-private static String generateLcov() {
-  StringBuilder sb = new StringBuilder();
-  for (String filename : coverage.keySet()) {
-    sb.append("SF:" + filename + "\n");
-    for (Map.Entry&lt;Integer, Boolean&gt; line : coverage.get(filename).entrySet()) {
-      sb.append(String.format("DA:%d,%d\n", line.getKey(), line.getValue() ? 1 : 0));
-    }
-    sb.append("end_of_record\n");
-  }
-  return sb.toString();
-}
-</code></pre>
-
-<p>Note how we read the output path from the <code>coverage.report.path</code> property; this is
-useful since we generate two reports, one during instrumentation and one during
-execution.</p>
-
-<p>(<code>writeCoverageToFile</code> is a bit awkward, again because I don&rsquo;t want
-to use Guava in the runtime code. It could just be a call to
-<code>Files.write</code>).</p>
-
-<p>We&rsquo;re close to the payoff. We can change the <code>main</code> method of
-<code>CoverageVisitor</code> to take a class as a command line argument
-instead of hard coding in our <code>Hello</code> class. Since for now we&rsquo;re
-assuming a single input class, we&rsquo;ll just print the instrumented
-class to standard output and let the caller decide where to put it.</p>
-
-<pre><code class="java A proper main method.">public static void main(String[] args) throws IOException, ParseException {
-    File file = new File(args[0]);
-    CompilationUnit unit = JavaParser.parse(new FileReader(file));
-    unit.accept(new CoverageVisitor(file.getAbsolutePath()), null);
-    System.out.println(unit.toString());
-}
-</code></pre>
-
-<p>Now we should be able to instrument, compile and execute a class,
-and use <code>genhtml</code> to visualize the resulting coverage report. The
-following assumes <code>CoverageVisitor</code> and <code>CoverageTracker</code> were compiled
-and the class files are in a directory called <code>bin</code>:</p>
-
-<pre><code class="bash Putting it all together.">$ pwd
-/Users/isbadawi/Documents/workspace/coverage-example
-$ cat Hello.java
-public class Hello {
-  public static void main(String[] args) {
-    System.out.println("hello, world");
-  }
-}
-$ mkdir instrumented
-$ java -cp bin -Dcoverage.report.path=instrumented/baseline_coverage.lcov \
-       io.badawi.coverage.CoverageVisitor Hello.java &gt; instrumented/Hello.java
-$ cd instrumented
-$ cat baseline_coverage.lcov
-SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
-DA:3,0
-end_of_record      
-$ cat Hello.java
-public class Hello {
-
-    public static void main(String[] args) {
-        {
-            System.out.println("hello, world");
-            io.badawi.coverage.runtime.CoverageTracker.markExecuted("/Users/isbadawi/Documents/workspace/coverage-example/Hello.java", 3);
-        }
-    }
-}
-$ javac -cp .:../bin Hello.java &amp;&amp; java -cp .:../bin Hello
-hello, world
-$ cat coverage_report.lcov
-SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
-DA:3,1
-end_of_record
-$ lcov -a baseline_coverage.lcov -a coverage_report.lcov -o combined_coverage.lcov
-$ genhtml combined_coverage.lcov -o report
-$ cd report &amp;&amp; python -m SimpleHTTPServer
-Serving HTTP on 0.0.0.0 port 8000 ...
-</code></pre>
-
-<p>We use the <code>lcov</code> command to merge together our baseline and runtime coverage
-reports. (In this case, the runtime coverage report is enough, but in general
-this step is necessary). Then we feed the merged report to <code>genhtml</code>, which
-generates a little HTML report. <code>python -m SimpleHTTPServer</code> just serves up the
-contents of the current directory on port 8000. Pointing our browser to
-<code>localhost:8000</code> should then show a nice coverage report (which I&rsquo;ve placed
-<a href="/coverage-report">here</a>).</p>
-
-<h2>Handling everything</h2>
-
-<p>Now that&rsquo;s we&rsquo;ve got this running end-to-end as sort of proof of concept,
-we can go back and tie up some loose ends. <code>CoverageVisitor</code> only instruments
-expression statements, for simplicity and because that&rsquo;s the only kind of
-statement the hello world example contained. We&rsquo;d like to extend our approach
-to handle everything.</p>
-
-<p>If we worked at level of statements, we&rsquo;d need to write code to handle all the different
-kinds of statements &ndash; if statements, for loops, while loops, throw statements,
-assert statements, and so on. For each of these we&rsquo;d need to come up with a
-transformation that inserted coverage tracking calls in the right place. A simpler
-solution would be to work with expressions, and try to come up with a single transformation
-that works for all expressions.</p>
-
-<p>One idea would be to take our <code>markExecuted</code> method and have it take an expression
-as an argument and return its value, like this:</p>
-
-<pre><code class="java markExecuted as an expression">public static &lt;T&gt; T markExecuted(String filename, int line, T expression) {
-  markExecuted(filename, line);
-  return expression;
-}
-</code></pre>
-
-<p>Then you could essentially wrap expressions in a call to <code>markExecuted</code>; the
-expression would evaluate to the same value, and coverage would be tracked.
-For instance, this:</p>
-
-<pre><code class="java An if statement.">if (1 &lt; 2) {
-  // ...
-}
-</code></pre>
-
-<p>would become this:</p>
-
-<pre><code class="java The same if statement, instrumented.">if (CoverageTracker.markExecuted(/* file */, /* line */, 1 &lt; 2)) {
-  // ...
-}
-</code></pre>
-
-<p>and the same transformation would apply for loop conditions, assertions,
-and so on, without needing to write different cases for them.</p>
-
-<p>There is just a small issue, which is that this won&rsquo;t work if the
-expression has type <code>void</code>, since you can&rsquo;t pass
-something of type <code>void</code> to a method. This turns out not to be a huge deal; we don&rsquo;t need
-to perform any sort of type inference or anything like that. Expressions of type <code>void</code> can only
-occur in two places: expression statements (like our call to <code>System.out.println</code>),
-and for loop headers (in the initialization and increment sections). We can can just
-handle those two cases separately, and we&rsquo;ll be fine.</p>
-
-<p>We already took care of expression statements earlier, by inserting the coverage tracking
-call afterwards, as a separate statement. We can use the same sort of idea to take care
-of for loop headers. The initialization and increment sections include comma-separated
-lists of expressions; when considering expressions there, we can insert our coverage
-tracking call as the next element in the comma-separated list.</p>
-
-<p>This should be good. Conceptually, it&rsquo;s simpler than handling every statement separately.
-Unfortunately, the visitor machinery in javaparser doesn&rsquo;t seem to have a mechanism for
-writing a single method that handles all kinds of expressions. The ugly, clumsy way
-around this is to write a <code>visit</code> method for every different kind of expression, which
-looks like this:</p>
-
-<pre><code class="java Instrumenting expressions.">@Override
-public Node visit(ArrayAccessExpr n, Object arg) {
-  return makeCoverageTrackingCall(n);
-}
-
-@Override
-public Node visit(ArrayCreationExpr n, Object arg) {
-  return makeCoverageTrackingCall(n);
-}
-
-// 20-something identical cases
-</code></pre>
-
-<p>I don&rsquo;t really like this, but conceptually it&rsquo;s still simpler than handling statements
-separately. Even if we went the other way, we&rsquo;d need to do this to properly handle assert and throw statements;
-we couldn&rsquo;t insert a statement after, since it might not be executed.</p>
-
-<h2>Where to go from here?</h2>
-
-<p>That covers pretty much everything. We&rsquo;ve put together a simplistic line coverage tool for Java, which works
-by instrumenting Java code as a source-to-source transformation. The complete code can be found <a href="https://github.com/isbadawi/coverage-example">on github</a>.
-Some closing remarks:</p>
-
-<ul>
-<li>The most popular Java coverage tool is probably <a href="http://emma.sourceforge.net">Emma</a>. It works by instrumenting bytecode (.class files)
-instead of source code. This has a few advantages; for instance Emma provides a special classloader that can
-instrument code on the fly as it&rsquo;s loaded, which we can&rsquo;t really do with this approach. (The main benefit of this
-approach is that&rsquo;s fairly accessible, and can be explained without requiring knowledge of JVM bytecode).</li>
-<li>Not all coverage tools work this way; an interesting one to look at is <a href="http://nedbatchelder.com/code/coverage">coverage.py</a>, which is based
-on <a href="http://docs.python.org/2/library/sys.html#sys.settrace">a hook provided by the python interpreter</a>.</li>
-</ul>
-
 ]]></content>
   </entry>
   

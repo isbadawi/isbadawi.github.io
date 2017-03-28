@@ -9,8 +9,8 @@
   <meta name="author" content="Ismail Badawi">
 
   
-  <meta name="description" content="Sometimes, if I have a generator that I happen to know is non-empty, and I want
-to get at the first element, I&rsquo;ll write code like this: 1 &hellip;">
+  <meta name="description" content="I like out-of-tree builds. Out-of-tree builds are nice for lots of reasons. You
+can have multiple builds of the same project coexisting side-by-side &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,6 +83,52 @@ to get at the first element, I&rsquo;ll write code like this: 1 &hellip;">
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2017/03/28/automatic-directory-creation-in-make/">Automatic Directory Creation in Make</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-03-28T01:14:40-04:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>1:14 am</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I like out-of-tree builds. Out-of-tree builds are nice for lots of reasons. You
+can have multiple builds of the same project coexisting side-by-side &ndash; for
+example a debug build for development, a release build, and an instrumented
+build for code coverage runs. All the generated build artifacts are together
+underneath one directory which you can easily delete without having to maintain
+a <code>make clean</code> target, or place under <code>.gitignore</code> without having to maintain a
+growing set of patterns for the different kinds of artifacts. I was going to
+write a post about this, but came across
+<a href="http://voices.canonical.com/jussi.pakkanen/2013/04/16/why-you-should-consider-using-separate-build-directories/">this one by Jussi Pakkanen</a> which covers a lot of the
+ground I would have, so I&rsquo;ll just link to it here.</p>
+
+<p>Instead, this post is about an issue that arises when implementing out-of-tree
+builds in make, and the best approach I&rsquo;ve found for dealing with it.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2017/03/28/automatic-directory-creation-in-make/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2016/03/27/unintended-stopiteration-in-a-generator/">Unintended StopIteration in a Generator</a></h1>
     
     
@@ -107,44 +153,14 @@ to get at the first element, I&rsquo;ll write code like this:</p>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>In theory, the intended meaning of this code is something like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;.o&#39;</span><span class="p">)]</span>
-</span><span class='line'><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="c"># or maybe assert len(outputs) == 1</span>
-</span><span class='line'><span class="n">output</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span></code></pre></td></tr></table></div></figure>
 
 
-<p>These two pieces of code are similar, but differ in one important way &ndash; if the
-assumption is wrong (i.e. there is a bug in the program), then the second will
-raise an <code>AssertionError</code>, while the first will raise a <code>StopIteration</code>
-exception. If this code happens to be inside a generator, maybe like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">def</span> <span class="nf">outputs</span><span class="p">(</span><span class="n">dirs</span><span class="p">):</span>
-</span><span class='line'>  <span class="k">for</span> <span class="nb">dir</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>
-</span><span class='line'>    <span class="k">yield</span> <span class="nb">next</span><span class="p">(</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;.o&#39;</span><span class="p">))</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then while an <code>AssertionError</code> would correctly bubble up to the caller, a
-<code>StopIteration</code> exception would instead only prematurely signal that the
-generator is exhausted, and it wouldn&rsquo;t be possible in general for the caller
-to tell that something has gone wrong &ndash; it&rsquo;s likely that the program would
-just keep running and produce wrong results, making the bug potentially much
-less straightforward to track down.</p>
-
-<p>So while using <code>next</code> for this purpose is cute, its behavior in cases like this
-might catch you off guard. If your intention is to communicate an assumption
-you&rsquo;re making, you&rsquo;re probably better off using <code>assert</code>, even if it&rsquo;s slightly
-more long-winded.</p>
 </div>
   
+  
+    <footer>
+      <a rel="full-article" href="/blog/2016/03/27/unintended-stopiteration-in-a-generator/">Read on &rarr;</a>
+    </footer>
   
 
 
@@ -173,60 +189,12 @@ more long-winded.</p>
 
   <div class="entry-content"><p>This is a small gotcha about file permissions I ran into recently.</p>
 
-<p>Let&rsquo;s say there is a file on which you don&rsquo;t have write permission:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>ls -l file
-</span><span class='line'>-rw-r--r--  <span class="m">1</span> notyou  somegroup  <span class="m">68</span> <span class="m">25</span> Mar 21:12 file
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>You can&rsquo;t write to this file:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span><span class="nb">echo</span> <span class="s2">&quot;some text&quot;</span> &gt; file
-</span><span class='line'>bash: file: Permission denied
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>However, let&rsquo;s say this file is in a directory on which you do have write
-permission (assuming here that you are in <code>somegroup</code>):</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>ls -ld .
-</span><span class='line'>drwxrwxr-x  <span class="m">2</span> notyou  somegroup  <span class="m">68</span> <span class="m">25</span> Mar 21:12 dir
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Now even though you can&rsquo;t modify the file, write permission on the directory
-lets you remove the file and write a new file in its place:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>rm file
-</span><span class='line'><span class="nv">$ </span><span class="nb">echo</span> <span class="s2">&quot;some text&quot;</span> &gt; file
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Depending on the situation, this can be just as good. You don&rsquo;t even have to do
-this manually &ndash;
-<a href="https://github.com/vim/vim/blob/1e7885abe8daa793fd9328d0fd6c456214cb467e/src/fileio.c#L4300-L4307">if you&rsquo;re using vim, then <code>:w!</code> will automatically do this if the file is not writable</a>.</p>
-
-<p>I encountered a system at work that would inspect the contents of certain files
-to decide whether to allow certain dangerous operations. These files had
-clearly defined owners that you were meant to get in touch with to ask for
-approval &ndash; if approval was granted, they would edit the relevant files for
-you, so that you could go ahead and do what you needed to do. But since the
-files were set up in this way &ndash; read-only in a group-writable directory &ndash; in
-practice anyone could edit them, bypassing whatever restrictions were in place.</p>
-
-<p>If you&rsquo;re relying on a file being read-only, be mindful of the permissions
-set on any parent directories.</p>
 </div>
   
+  
+    <footer>
+      <a rel="full-article" href="/blog/2016/03/25/read-only-file-in-writable-directory/">Read on &rarr;</a>
+    </footer>
   
 
 
@@ -451,6 +419,10 @@ for Java.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2017/03/28/automatic-directory-creation-in-make/">Automatic Directory Creation in Make</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2016/03/27/unintended-stopiteration-in-a-generator/">Unintended StopIteration in a Generator</a>
       </li>
     
@@ -466,10 +438,6 @@ for Java.</p>
         <a href="/blog/2015/09/07/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2014/04/23/the-compositional-nature-of-vim/">The Compositional Nature of Vim</a>
-      </li>
-    
   </ul>
 </section>
 
@@ -483,7 +451,7 @@ for Java.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2016 - Ismail Badawi -
+  Copyright &copy; 2017 - Ismail Badawi -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

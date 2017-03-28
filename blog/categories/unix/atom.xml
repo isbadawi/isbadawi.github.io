@@ -4,7 +4,7 @@
   <title><![CDATA[Category: unix | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/unix/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2016-03-27T14:00:51-04:00</updated>
+  <updated>2017-03-28T03:39:07-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -19,6 +19,9 @@
     <updated>2016-03-25T21:10:50-04:00</updated>
     <id>http://ismail.badawi.io/blog/2016/03/25/read-only-file-in-writable-directory</id>
     <content type="html"><![CDATA[<p>This is a small gotcha about file permissions I ran into recently.</p>
+
+<!--more-->
+
 
 <p>Let&rsquo;s say there is a file on which you don&rsquo;t have write permission:</p>
 
