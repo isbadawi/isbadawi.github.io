@@ -87,6 +87,8 @@ mkdir -p build
 cc -c src/main.c -o build/main.o
 mkdir -p build/foo/bar
 cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+mkdir -p build/util
+cc -c src/util/log.c -o build/util/log.o
 mkdir -p build
 cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
 ```
