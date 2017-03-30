@@ -4,7 +4,7 @@
   <title><![CDATA[Category: code | Ismail Badawi]]></title>
   <link href="http://ismail.badawi.io/blog/categories/code/atom.xml" rel="self"/>
   <link href="http://ismail.badawi.io/"/>
-  <updated>2017-03-28T03:39:07-04:00</updated>
+  <updated>2017-03-29T20:00:13-04:00</updated>
   <id>http://ismail.badawi.io/</id>
   <author>
     <name><![CDATA[Ismail Badawi]]></name>
@@ -95,6 +95,8 @@ mkdir -p build
 cc -c src/main.c -o build/main.o
 mkdir -p build/foo/bar
 cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+mkdir -p build/util
+cc -c src/util/log.c -o build/util/log.o
 mkdir -p build
 cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
 </code></pre>

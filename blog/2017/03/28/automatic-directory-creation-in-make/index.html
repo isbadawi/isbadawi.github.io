@@ -212,11 +212,15 @@ of the target path. If we run <code>make program</code>, we get this:</p>
 <span class='line-number'>5</span>
 <span class='line-number'>6</span>
 <span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
 </pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">$ </span>make program
 </span><span class='line'>mkdir -p build
 </span><span class='line'>cc -c src/main.c -o build/main.o
 </span><span class='line'>mkdir -p build/foo/bar
 </span><span class='line'>cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+</span><span class='line'>mkdir -p build/util
+</span><span class='line'>cc -c src/util/log.c -o build/util/log.o
 </span><span class='line'>mkdir -p build
 </span><span class='line'>cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
 </span></code></pre></td></tr></table></div></figure>
