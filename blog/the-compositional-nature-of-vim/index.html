@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>The Compositional Nature of Vim :: Ismail Badawi</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="I use vim. I&amp;rsquo;ve used vim since I started programming; the very first program I wrote &amp;ndash; hello world in C, following along a cprogramming.com tutorial &amp;ndash; was typed out in vim, inside a cygwin environment on Windows. Naturally, at first it was hard and intimidating. I didn&amp;rsquo;t know how to do anything, least of all edit text. I learned about insert mode and normal mode. I learned about navigating using hjkl, and deleting the current line with dd, and saving and quitting with :wq, and for a long time that was it." />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="https://ismail.badawi.io/blog/the-compositional-nature-of-vim/" />
+
+
+
+
+<link rel="stylesheet" href="https://ismail.badawi.io/assets/style.css">
+
+  <link rel="stylesheet" href="https://ismail.badawi.io/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon" href="https://ismail.badawi.io/img/apple-touch-icon-192x192.png">
+
+  <link rel="shortcut icon" href="https://ismail.badawi.io/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="The Compositional Nature of Vim">
+<meta property="og:description" content="I use vim. I&amp;rsquo;ve used vim since I started programming; the very first program I wrote &amp;ndash; hello world in C, following along a cprogramming.com tutorial &amp;ndash; was typed out in vim, inside a cygwin environment on Windows. Naturally, at first it was hard and intimidating. I didn&amp;rsquo;t know how to do anything, least of all edit text. I learned about insert mode and normal mode. I learned about navigating using hjkl, and deleting the current line with dd, and saving and quitting with :wq, and for a long time that was it." />
+<meta property="og:url" content="https://ismail.badawi.io/blog/the-compositional-nature-of-vim/" />
+<meta property="og:site_name" content="Ismail Badawi" />
+
+  
+    <meta property="og:image" content="https://ismail.badawi.io/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+
+  <meta property="article:published_time" content="2014-04-23 00:00:00 &#43;0000 UTC" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="blue">
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    Ismail Badawi
+  </div>
+</a>
+
+    </div>
+    
+      <div class="menu-trigger">menu</div>
+    
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/about">About</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="https://ismail.badawi.io/blog/the-compositional-nature-of-vim/">The Compositional Nature of Vim</a></h1>
+  <div class="post-meta">
+    
+      <span class="post-date">
+        2014-04-23 
+      </span>
+    
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="https://ismail.badawi.io/tags/vim/">vim</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>I use vim. I&rsquo;ve used vim since I started programming; the very first program I
+wrote &ndash; hello world in C, following along a cprogramming.com tutorial &ndash; was
+typed out in vim, inside a cygwin environment on Windows. Naturally, at first
+it was hard and intimidating. I didn&rsquo;t know how to do anything, least of all
+edit text. I learned about insert mode and normal mode. I learned about
+navigating using <code>hjkl</code>, and deleting the current line with <code>dd</code>, and saving
+and quitting with <code>:wq</code>, and for a long time that was it.</p>
+<!-- raw HTML omitted -->
+<p>Over time I learned more and more. I learned that I could copy the current line
+with <code>yy</code>, and paste it somewhere with <code>p</code>. This meant that <code>yyp</code> duplicated
+the current line! I learned that I could indent the current line with <code>&gt;&gt;</code>, and
+also that I could indent the next 5 lines with <code>5&gt;&gt;</code>. I learned that <code>gg</code>
+jumped to the top of the file. I learned that I could jump to line 34 with
+<code>34G</code>. I also learned a strange incantation &ndash; I could write <code>%s/foo/bar/g</code> to
+replace all occurrences of <code>foo</code> with <code>bar</code> in the whole file. I used this all
+the time, and vim felt really powerful!</p>
+<p>I went on like this for <em>years</em>. What I&rsquo;m trying to get at is that I never
+really took the time to learn how vim worked. I had no clue about the big
+picture. I didn&rsquo;t know any concepts. Even though I used vim for hours each day,
+and I felt like I was constantly improving and learning new things, and my
+peers in university thought me knowledgeable enough to come to me with their
+vim questions, really I was just getting by on ad-hoc memorization.</p>
+<p>I think this is actually not uncommon. There is this mystical aura around vim;
+people have a tendency to think that becoming an effective vim user just means
+memorizing enough arcane commands that eventually you&rsquo;ll just know which
+incantation to type in to do what you want in any given situation. Want to copy
+the whole file to the clipboard?  Easy &ndash; it&rsquo;s <code>gg&quot;*yG</code>, right? Yes, that&rsquo;s it.
+I have it here in my notes &ndash; &ldquo;copy file to clipboard: <code>gg&quot;*yG</code>&rdquo;. Copying the
+next two paragraphs? Gee, I don&rsquo;t know, let me look that up &ndash; ah, here. It&rsquo;s
+<code>{&quot;*y2}</code>. I&rsquo;ll just write that down and next time it comes up I&rsquo;ll know.</p>
+<p>Some people are (rightly) turned off by this. Others &ndash; like me &ndash; take it in
+stride and spend years memorizing opaque formulas like the above, motivated in
+large part by the oft-touted idea that knowing vim inside and out will make you
+orders of magnitude more productive (and in no small part by garden-variety
+hipsterism). I know from experience that this approach can take you quite a long
+way. It&rsquo;ll only take you so far though &ndash; in the end it&rsquo;s as silly as learning
+to speak English by trying to memorize all the possible sentences you can say,
+without learning about verbs or nouns.</p>
+<h2 id="composition">Composition<a href="#composition" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>The magic of vim is that it&rsquo;s comprised of lots of small primitives that
+compose well together. Among these primitives are motions, operators, and text
+objects.</p>
+<h3 id="motions">Motions<a href="#motions" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>Pressing <code>l</code> moves your cursor one character to the right. Pressing <code>h</code> moves
+it one character to the left. <code>j</code> moves it one character down, and <code>k</code> one
+character up.</p>
+<p><code>w</code> moves it to start of the next word. <code>e</code> moves it to the end of the next
+word. <code>b</code> moves it to the start of the previous word.</p>
+<p><code>$</code> moves it to the end of the current line, and <code>0</code> to the start of the
+current line. <code>gg</code> moves it to the top of the file, and <code>G</code> to the bottom of
+the file.  <code>{</code> moves it to the start of the paragraph, and <code>}</code> to the end of
+the paragraph.</p>
+<p>You can use <code>G</code> with a line number to jump to that line number.</p>
+<p>The <code>t</code> and <code>f</code> motions move forward until a character. For instance, <code>tb</code>
+moves forward until (but not including) the next occurrence of b. <code>fb</code> moves
+forward until (and including) the next occurrence of b. Both of these have
+uppercase versions that move backwards instead of forwards.</p>
+<p>You can search forwards with <code>/regex</code>, and backwards with <code>?regex</code>. After
+searching, you can use <code>n</code> to jump forwards to the next match, and <code>N</code> to jump
+backwards to the last match.</p>
+<p>Where it makes sense, the previous motions can be prefaced with a count. For
+instance, <code>10j</code> moves down 10 lines instead of 1, and <code>3tg</code> moves forward
+to the third occurrence of <code>g</code>.</p>
+<p>Now it might seem like I&rsquo;m just confirming the prejudice I was decrying
+earlier. To a certain extent, these primitives are just things you should
+commit to muscle memory. What you get in return is substantial, however.</p>
+<h3 id="operators">Operators<a href="#operators" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>We just learned a bunch of motions. Now suppose we want to delete something,
+instead of moving. There is only one new thing to learn: the <code>d</code> operator. <code>d</code>
+stands for delete. What can you delete? Any motion, for one thing. <code>j</code> moves
+down a line, so <code>dj</code> deletes down a line (that is, from the current position
+until the same column on the next line). <code>gg</code> moves to the top of the file, so
+<code>dgg</code> deletes to the top of the file. <code>/foo</code> jumps to the next occurrence of
+<code>foo</code>, so <code>d/foo</code> deletes until the next occurrence of <code>foo</code>.</p>
+<p>Another operator is <code>c</code>, which stands for change. <code>c</code> is like <code>d</code>, except that
+it puts you in insert mode after. So <code>cj</code> behaves like <code>dj</code>, except that it
+puts you in insert mode. Similarly <code>cgg</code> behaves like <code>dgg</code> and so on.</p>
+<p>Another operator is <code>y</code>, which stands for yank. It copies things into
+registers.  You can learn more about registers later; to start with, you can
+just use <code>y</code> to yank things into the default register, and use <code>p</code> to put them
+somewhere else. As with <code>c</code> and <code>d</code>, you can use <code>yj</code> to yank down a line,
+<code>ygg</code> to yank to the top of the file, and so on.</p>
+<p>Another operator is <code>gu</code>, which is used for lowercasing. <code>gu4j</code> lowercases four
+lines down, <code>gugg</code> lowercases to the top of the file, <code>guG</code> lowercases to the
+bottom of the file, and so on. There&rsquo;s also <code>gU</code> for uppercasing, <code>g~</code> for
+swapping case and (strangely enough) <code>g?</code> for rot13 encoding.</p>
+<p>Another operator is <code>&gt;</code>, which handles indentation. You can use <code>&gt;j</code> to indent
+down a line, <code>&gt;4k</code> to indent up four lines, <code>&gt;gg</code> to indent to the top of the
+file, <code>&gt;}</code> to indent to the end of the paragraph, and so on. The <code>&lt;</code> operator
+is similar, only it dedents instead of indenting. These two are a little
+different than the previous ones, since they operate on lines. For instance,
+<code>&gt;l</code> will indent the entire line.</p>
+<p>Another operator is <code>gq</code>, which is used for formatting. The specifics are
+configurable, but by default it reflows text so it&rsquo;s wrapped to <code>textwidth</code>
+characters. This is useful if you&rsquo;re looking to use no more than 80 characters
+per line, for instance. As before, you can use <code>gqgg</code> to reflow text to the top
+of the file, <code>gqG</code> to reflow text to the bottom of file, <code>gq10k</code> to reflow ten
+lines up, and so on.</p>
+<p>The nice thing here is that each operator we learn about can be composed with
+all the motions we know. Operators can also be used with these other things
+called text objects.</p>
+<h3 id="text-objects">Text objects<a href="#text-objects" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>Text objects are like motions in that they can be passed as arguments to
+operators. They&rsquo;re not like motions in that they don&rsquo;t move you; instead, they
+just refer to a region of text.</p>
+<p>For example, the <code>_</code> text object refers to the current line. You can write <code>d_</code>
+to delete the current line, <code>c_</code> to delete it and enter insert mode, <code>y_</code> to
+yank it, <code>&gt;_</code> to indent it, <code>gu_</code> to lowercase it, <code>gU_</code> to uppercase it, <code>g~_</code>
+to toggle its case, <code>g?_</code> to rot13 encode it and so on. Since operating on the
+current line is very common, repeating an operator is shorthand for applying it
+on the current line.  For instance, <code>dd</code> does the same thing as <code>d_</code>, <code>cc</code> does
+the same as <code>c_</code>, and so on.</p>
+<p>Another text object is <code>iw</code>. If your cursor is within a word, then <code>iw</code> refers
+to the whole word. You can write <code>diw</code> to delete the word under the cursor,
+<code>ciw</code> to delete it and enter insert mode, <code>yiw</code> to yank it, <code>guiw</code> to lowercase
+it, <code>gUiw</code> to uppercase it, <code>g~iw</code> to toggle its case, <code>g?iw</code> to rot13 encode
+it and so on.</p>
+<p>Another text object is <code>ip</code>. If your cursor is within a paragraph, then <code>ip</code>
+refers to the whole paragraph. You can write <code>dip</code> to delete the paragraph
+under the cursor, <code>cip</code> to delete it and enter insert mode, <code>yip</code> to yank it,
+<code>guip</code> to lowercase it, <code>gUip</code> to uppercase it, <code>g~ip</code> to toggle its case,
+<code>g?ip</code> to rot13 encode it, and so on. Personally, I find <code>gqip</code> very useful
+when writing prose.</p>
+<p>There are text objects that refer to regions of text between delimiters, which
+can be very useful when editing code.  If your cursor is within a double quoted
+string, then <code>i&quot;</code> refers to the text between the quotes, and <code>a&quot;</code> refers to the
+same but also includes the quotes.  Similarly you have <code>i'</code> and <code>a'</code>, <code>i(</code> and
+<code>a(</code>, <code>i[</code> and <code>a[</code>, <code>i{</code> and <code>a{</code>, <code>i&lt;</code> and <code>a&lt;</code>, and <code>i` </code> and <code>a` </code>. As
+with the other text objects, you can use <code>d</code>, <code>c</code>, <code>y</code>, <code>gu</code>, <code>gU</code>, <code>g~</code>, and
+any other operators you know.</p>
+<h2 id="the-power-of-composition">The power of composition<a href="#the-power-of-composition" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>There&rsquo;s a combinatorial effect here. If I know about <code>o</code> operators, <code>m</code> motions
+and <code>t</code> text objects, I can do up to <code>o * (m + t)</code> different things. Every new
+operator I learn lets me do up to <code>m + t</code> new things, and every motion or text
+object I learn lets me do up to <code>o</code> new things. Once you internalize vim&rsquo;s
+language for editing text, then not only does editing text efficiently become
+easier, but you also start learning at a much faster rate, as every new thing
+you learn interacts with all the things you already know.</p>
+<p>This doesn&rsquo;t just apply to the functionality built in to vim. There are many
+ways in which one can extend vim through plugins. Assuming these plugins are
+well behaved, then they too benefit from composing with everything else.</p>
+<p>One can add new operators, for instance. An example is the
+<a href="https://github.com/tpope/vim-commentary">commentary</a> plugin, which adds the <code>gc</code> operator to toggle
+commenting lines. Since this is an operator, it can be used like <code>d</code> or
+<code>c</code>; <code>gcc</code> comments the current line, <code>gc4j</code> comments four lines down, <code>gcgg</code>
+comments to the top of the file, and so on.</p>
+<p>One can also add new text objects. For example, the <a href="https://github.com/nelstrom/vim-textobj-rubyblock">textobj-rubyblock</a>
+plugin adds the <code>ar</code> and <code>ir</code> text objects to refer to the current ruby block,
+or just its contents, respectively. This lets you write things like <code>dar</code> to
+delete the entire block the cursor is in, or <code>&lt;ir</code> to dedent its contents.</p>
+<p>One can also add new motions. For example, the
+<a href="https://github.com/bkad/CamelCaseMotion">CamelCaseMotion</a> plugin defines camel-case analogues of the
+<code>w</code>, <code>b</code>, and <code>e</code> motions, so that, for instance, you can jump to the start of
+the next word in a camel-cased identifier. It also defines text objects
+analogous to <code>iw</code> and so on for camel-cased words.</p>
+<p>The interaction between plugins like these is what led me to a sort of aha
+moment a while ago. At some point I&rsquo;d installed commentary, and a while later
+I&rsquo;d installed textobj-rubyblock, never thinking of them together. One day, I
+happened to want to comment out the contents of a ruby block, and intuitively I
+reached for <code>gcir</code>. This wasn&rsquo;t something I&rsquo;d learned. It certainly wasn&rsquo;t
+documented anywhere that this would work; the two plugins had been written
+independently by two different people. Not only did I not learn this, but I
+didn&rsquo;t even explicitly think about it. This was just intuition &ndash; since one of
+the operators at my disposal is <code>gc</code>, and one of the text objects at my
+disposal is <code>ir</code>, then <code>gcir</code> ought to work. And it did!</p>
+<h2 id="parting-thoughts">Parting thoughts<a href="#parting-thoughts" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>While vim sports many more features than just normal mode editing like this
+(and there are <a href="http://vimcasts.org/">many</a> <a href="http://pragprog.com/book/dnvim/practical-vim">good</a> <a href="http://learnvimscriptthehardway.stevelosh.com/">resources</a> for learning
+about these), internalizing this idea of composing together many small text
+editing primitives is one of the most important steps towards efficient vim
+use, and is the main thing I try to impress upon beginning vim users whenever
+the opportunity arises. Having this pointed out to me would certainly would
+have saved me a lot of time, as many of the &ldquo;tricks&rdquo; that I learned piecemeal
+during my first few years using vim were just instances of this sort of
+composition.</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        <span class="button previous">
+            <a href="https://ismail.badawi.io/blog/when-optimizations-hide-bugs/">
+                <span class="button__icon">←</span>
+                <span class="button__text">When Optimizations Hide Bugs</span>
+            </a>
+        </span>
+        
+        
+        <span class="button next">
+            <a href="https://ismail.badawi.io/blog/an-obscure-bug-story/">
+                <span class="button__text">An Obscure Bug Story</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+<div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "isbadawi" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="https://ismail.badawi.io/assets/main.js"></script>
+<script src="https://ismail.badawi.io/assets/prism.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

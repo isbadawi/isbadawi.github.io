@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>gwt on Ismail Badawi</title>
+    <link>https://ismail.badawi.io/tags/gwt/</link>
+    <description>Recent content in gwt on Ismail Badawi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 04 Feb 2014 00:00:00 +0000</lastBuildDate><atom:link href="https://ismail.badawi.io/tags/gwt/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>An Obscure Bug Story</title>
+      <link>https://ismail.badawi.io/blog/an-obscure-bug-story/</link>
+      <pubDate>Tue, 04 Feb 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://ismail.badawi.io/blog/an-obscure-bug-story/</guid>
+      <description>&lt;p&gt;It&amp;rsquo;s common to be asked a question like &amp;ldquo;what&amp;rsquo;s the hardest bug you&amp;rsquo;ve debugged?&amp;rdquo;
+at job interviews in tech. This post is about the bug I usually describe.
+The snag is that it&amp;rsquo;s quite involved and I don&amp;rsquo;t actually understand it all the
+way through &amp;ndash; there are one or two aspects to it I often hand-wavingly gloss over.
+The hope was that by writing it out and fact checking it I&amp;rsquo;d have a better handle
+on it; this is what came out.&lt;/p&gt;</description>
+      <content>&lt;p&gt;It&amp;rsquo;s common to be asked a question like &amp;ldquo;what&amp;rsquo;s the hardest bug you&amp;rsquo;ve debugged?&amp;rdquo;
+at job interviews in tech. This post is about the bug I usually describe.
+The snag is that it&amp;rsquo;s quite involved and I don&amp;rsquo;t actually understand it all the
+way through &amp;ndash; there are one or two aspects to it I often hand-wavingly gloss over.
+The hope was that by writing it out and fact checking it I&amp;rsquo;d have a better handle
+on it; this is what came out.&lt;/p&gt;
+&lt;p&gt;This came up during my first internship at Google in 2012. I was on a team in
+Ads, but I was mostly working on Google Web Toolkit, which was what many Ads
+applications were written in. My project was to add support in the GWT compiler
+for measuring code coverage from browser automation tests using WebDriver. This
+has nothing to with the bug except that it also involved coverage runs and because
+I had been messing with coverage stuff I&amp;rsquo;d been cc&amp;rsquo;d on the bug tracker and decided
+to look into it.&lt;/p&gt;
+&lt;p&gt;The bug manifested like this. There was a team in Ads that had a GWT application
+and a whole bunch of tests written against it. A single one of these tests had a
+strange property: it would pass during regular test runs, but it would fail during
+coverage runs. (In particular, there was an automatic nightly coverage run which
+always showed up as failing because of this.)&lt;/p&gt;
+&lt;p&gt;So this was weird &amp;ndash; why would running a test for coverage change its outcome?&lt;/p&gt;
+&lt;p&gt;I don&amp;rsquo;t remember what the test was actually testing, but modulo identifiers the
+relevant bit looked something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;@Test&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;testAllOptionsAreVisible&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    ImmutableSet&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Option&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; visibleOptions &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; methodContainingApplicationLogic&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
+    assertEquals&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;ImmutableSet&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;of&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;Option&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;values&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()),&lt;/span&gt; visibleOptions&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Here &lt;code&gt;ImmutableSet&lt;/code&gt; refers to &lt;a href=&#34;http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ImmutableSet.html&#34;&gt;this Guava collection&lt;/a&gt;, and &lt;code&gt;Option&lt;/code&gt; is some
+enum defined by the application. In Java, all enums are automatically equipped with a
+static &lt;code&gt;values()&lt;/code&gt; method, which returns an array of all the values on that enum, and so
+the intent here is to build a set containing all the enum values and compare that against
+the set built up by the test&amp;rsquo;s setup logic.&lt;/p&gt;
+&lt;p&gt;Digging through the error logs of the coverage run, the error looked liked this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;java.lang.AssertionError: expected:&amp;lt;[Lcom.google.ads.whatever.Option;@12345678&amp;gt; but was:&amp;lt;[FOO, BAR, BAZ]&amp;gt;
+       at OptionsPageTest.testAllOptionsAreVisible(OptionsPageTest.java:42]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;If you&amp;rsquo;re a Java person, the problem is fairly obvious; the thing on the left (corresponding to the first argument
+to &lt;code&gt;assertEquals&lt;/code&gt;) is an &lt;code&gt;ImmutableSet&amp;lt;Option[]&amp;gt;&lt;/code&gt; containing the result of calling &lt;code&gt;values()&lt;/code&gt;,
+instead of an &lt;code&gt;ImmutableSet&amp;lt;Option&amp;gt;&lt;/code&gt; containing a copy of the array. If you look at the docs linked above,
+you&amp;rsquo;ll notice that &lt;code&gt;ImmutableSet&lt;/code&gt; doesn&amp;rsquo;t actually have
+an &lt;code&gt;of(E[])&lt;/code&gt; method, which means that it wouldn&amp;rsquo;t copy the contents of the array. Instead the type inference
+comes up with &lt;code&gt;ImmutableSet&amp;lt;Option[]&amp;gt;&lt;/code&gt; and the method called is the &lt;code&gt;of(E)&lt;/code&gt; method where &lt;code&gt;E = Option[]&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;So the fix was to use &lt;code&gt;copyOf&lt;/code&gt; instead of &lt;code&gt;of&lt;/code&gt;, and that&amp;rsquo;s that. But now it seemed like the test shouldn&amp;rsquo;t have
+been passing in the first place, even during regular runs, since it was relying on this non-existent &lt;code&gt;of(E[])&lt;/code&gt; method
+that copies arrays. So what was going on really?&lt;/p&gt;
+&lt;p&gt;This requires a bit of background on GWT. GWT is a set of tools to write web apps, and its main premise is that
+it&amp;rsquo;s based on a Java to JavaScript compiler. You write apps in Java against a subset of the standard library, plus
+a bunch of GWT-specific libraries, and the compiler takes in your Java source (not the compiled class files),
+does a whole bunch of very aggressive optimizations, and spits out JavaScript.&lt;/p&gt;
+&lt;p&gt;Since the compiler takes in Java source code, it can&amp;rsquo;t deal with native methods, which are common in the standard
+library classes. It can also be useful to reimplement standard classes in such a way as to take advantage of
+JavaScript features and browser APIs &amp;ndash; implementing &lt;code&gt;ArrayList&lt;/code&gt; in terms of a JavaScript &lt;code&gt;Array&lt;/code&gt;, for instance.
+Given this, GWT has a notion of &lt;em&gt;emulated classes&lt;/em&gt;; classes are reimplemented in GWT-friendly Java,
+&lt;a href=&#34;http://code.google.com/p/google-web-toolkit-doc-1-5/wiki/DevGuideModuleXml#Overriding_one_package_implementation_with_another&#34;&gt;a special directive&lt;/a&gt; can be passed to the GWT compiler to let it find the emulated source,
+and the emulated classes are compiled to JavaScript alongside application code.
+GWT includes emulated versions of &lt;a href=&#34;http://www.gwtproject.org/doc/latest/RefJreEmulation.html&#34;&gt;a subset of the standard library&lt;/a&gt;, and the abovementioned directive
+is also available for applications or other libraries to use.&lt;/p&gt;
+&lt;p&gt;As it happens, one of these libraries was Guava &amp;ndash; several Guava collections, including &lt;code&gt;ImmutableSet&lt;/code&gt;, have
+emulated versions for use by GWT applications.&lt;/p&gt;
+&lt;p&gt;Switching gears slightly, one of the big selling points of GWT when it came out was that it was compatible with
+a lot of popular Java tools &amp;ndash; you could step through your app using Eclipse&amp;rsquo;s debugger, run tests
+with JUnit, and measure code coverage using &lt;a href=&#34;http://emma.sourceforge.net/&#34;&gt;Emma&lt;/a&gt;, a popular open source Java coverage tool.&lt;/p&gt;
+&lt;p&gt;To enable this, even though GWT application code ran as JavaScript in a browser in production, it could also
+be made to run as Java bytecode in a JVM in order to be more amenable to Java-based tools. Since the GWT compiler
+has all the source, it can just forward it along to a Java compiler and execute the resulting
+bytecode. There is just one snag, which is that GWT code can execute native JavaScript via GWT&amp;rsquo;s
+&lt;a href=&#34;http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsJSNI.html&#34;&gt;JavaScript native interface (JSNI)&lt;/a&gt; (either directly, or by calling into GWT libraries).
+For those cases, GWT supports &lt;a href=&#34;http://www.gwtproject.org/javadoc/latest/com/google/gwt/junit/client/GWTTestCase.html&#34;&gt;fancy JUnit integration&lt;/a&gt; where the code still runs as Java,
+except that a browser is brought up (either an emulated in-memory browser, or a real headless browser), native
+JavaScript methods are injected into it, and those native methods have their bytecode rewritten so that they use
+special wrappers that call the corresponding methods in the browser.&lt;/p&gt;
+&lt;p&gt;(As you might imagine, this is quite a bit slower &amp;ndash; it&amp;rsquo;s often not necessary as big chunks of testable code
+consist of relatively isolated application logic and can just run as plain Java instead of this hybrid mode.
+GWT also supports a &amp;ldquo;web mode&amp;rdquo; when the tests run as full on JavaScript &amp;ndash; this is even slower, but is useful
+to ward against possible behavior differences between Java and JavaScript.)&lt;/p&gt;
+&lt;p&gt;Now Emma is a coverage tool that works with JVM bytecode &amp;ndash; in a manner similar to what I described in &lt;a href=&#34;https://ismail.badawi.io/blog/2013/05/03/writing-a-code-coverage-tool&#34;&gt;my last post&lt;/a&gt;,
+it instruments class files, so that as they run, they create some files containing coverage data,
+which are later picked up to produce coverage reports. GWT&amp;rsquo;s Emma support is the aspect of this whole thing that I
+understand least. (There exists a wiki page with &lt;a href=&#34;http://code.google.com/p/google-web-toolkit/wiki/EmmaSupport&#34;&gt;some notes on Emma support&lt;/a&gt;, but it&amp;rsquo;s not very enlightening).
+It seems that whatever magic GWT needs to perform to play nice with Emma is not done for emulated classes.
+The only thing I could find related to this is &lt;a href=&#34;https://groups.google.com/forum/#!msg/scalagwt/TE5O9hDTTd4/ENvpFnK2AkkJ&#34;&gt;this old thread from the Scala+GWT project&lt;/a&gt;,
+which also isn&amp;rsquo;t very enlightening, but seems to say that when Emma support was being developed it was decided that
+emulated classes weren&amp;rsquo;t worth supporting since, among other things, they weren&amp;rsquo;t used much.
+In any case, this means that for coverage runs, not only does the code run as Java in a JVM, but it runs against
+the &amp;ldquo;real&amp;rdquo; versions of classes.&lt;/p&gt;
+&lt;p&gt;The final piece of the puzzle is that this mystery &lt;code&gt;ImmutableSet.of(E[])&lt;/code&gt; method &lt;em&gt;used&lt;/em&gt; to exist; you can browse
+&lt;a href=&#34;http://docs.guava-libraries.googlecode.com/git-history/v10.0/javadoc/com/google/common/collect/ImmutableSet.html&#34;&gt;an old version of the docs&lt;/a&gt; to see it. It was deprecated for a long time and eventually removed.
+However, for whatever reason, the GWT-emulated version was not kept in sync with these changes. So the GWT-emulated
+version still had that method, and this was why the regular test run, which ran against the emulated classes, passed.
+The coverage run, which ran against the &amp;ldquo;real&amp;rdquo; Guava, failed.&lt;/p&gt;</content>
+    </item>
+    
+  </channel>
+</rss>

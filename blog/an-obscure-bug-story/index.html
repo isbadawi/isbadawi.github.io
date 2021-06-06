@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>An Obscure Bug Story :: Ismail Badawi</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="It&amp;rsquo;s common to be asked a question like &amp;ldquo;what&amp;rsquo;s the hardest bug you&amp;rsquo;ve debugged?&amp;rdquo; at job interviews in tech. This post is about the bug I usually describe. The snag is that it&amp;rsquo;s quite involved and I don&amp;rsquo;t actually understand it all the way through &amp;ndash; there are one or two aspects to it I often hand-wavingly gloss over. The hope was that by writing it out and fact checking it I&amp;rsquo;d have a better handle on it; this is what came out.
+" />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="https://ismail.badawi.io/blog/an-obscure-bug-story/" />
+
+
+
+
+<link rel="stylesheet" href="https://ismail.badawi.io/assets/style.css">
+
+  <link rel="stylesheet" href="https://ismail.badawi.io/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon" href="https://ismail.badawi.io/img/apple-touch-icon-192x192.png">
+
+  <link rel="shortcut icon" href="https://ismail.badawi.io/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="An Obscure Bug Story">
+<meta property="og:description" content="It&amp;rsquo;s common to be asked a question like &amp;ldquo;what&amp;rsquo;s the hardest bug you&amp;rsquo;ve debugged?&amp;rdquo; at job interviews in tech. This post is about the bug I usually describe. The snag is that it&amp;rsquo;s quite involved and I don&amp;rsquo;t actually understand it all the way through &amp;ndash; there are one or two aspects to it I often hand-wavingly gloss over. The hope was that by writing it out and fact checking it I&amp;rsquo;d have a better handle on it; this is what came out.
+" />
+<meta property="og:url" content="https://ismail.badawi.io/blog/an-obscure-bug-story/" />
+<meta property="og:site_name" content="Ismail Badawi" />
+
+  
+    <meta property="og:image" content="https://ismail.badawi.io/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+
+  <meta property="article:published_time" content="2014-02-04 00:00:00 &#43;0000 UTC" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="blue">
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    Ismail Badawi
+  </div>
+</a>
+
+    </div>
+    
+      <div class="menu-trigger">menu</div>
+    
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/about">About</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="https://ismail.badawi.io/blog/an-obscure-bug-story/">An Obscure Bug Story</a></h1>
+  <div class="post-meta">
+    
+      <span class="post-date">
+        2014-02-04 
+      </span>
+    
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="https://ismail.badawi.io/tags/code/">code</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/google/">google</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/gwt/">gwt</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>It&rsquo;s common to be asked a question like &ldquo;what&rsquo;s the hardest bug you&rsquo;ve debugged?&rdquo;
+at job interviews in tech. This post is about the bug I usually describe.
+The snag is that it&rsquo;s quite involved and I don&rsquo;t actually understand it all the
+way through &ndash; there are one or two aspects to it I often hand-wavingly gloss over.
+The hope was that by writing it out and fact checking it I&rsquo;d have a better handle
+on it; this is what came out.</p>
+<p>This came up during my first internship at Google in 2012. I was on a team in
+Ads, but I was mostly working on Google Web Toolkit, which was what many Ads
+applications were written in. My project was to add support in the GWT compiler
+for measuring code coverage from browser automation tests using WebDriver. This
+has nothing to with the bug except that it also involved coverage runs and because
+I had been messing with coverage stuff I&rsquo;d been cc&rsquo;d on the bug tracker and decided
+to look into it.</p>
+<p>The bug manifested like this. There was a team in Ads that had a GWT application
+and a whole bunch of tests written against it. A single one of these tests had a
+strange property: it would pass during regular test runs, but it would fail during
+coverage runs. (In particular, there was an automatic nightly coverage run which
+always showed up as failing because of this.)</p>
+<p>So this was weird &ndash; why would running a test for coverage change its outcome?</p>
+<p>I don&rsquo;t remember what the test was actually testing, but modulo identifiers the
+relevant bit looked something like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@Test</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">testAllOptionsAreVisible</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    ImmutableSet<span style="color:#f92672">&lt;</span>Option<span style="color:#f92672">&gt;</span> visibleOptions <span style="color:#f92672">=</span> methodContainingApplicationLogic<span style="color:#f92672">();</span>
+    assertEquals<span style="color:#f92672">(</span>ImmutableSet<span style="color:#f92672">.</span><span style="color:#a6e22e">of</span><span style="color:#f92672">(</span>Option<span style="color:#f92672">.</span><span style="color:#a6e22e">values</span><span style="color:#f92672">()),</span> visibleOptions<span style="color:#f92672">);</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Here <code>ImmutableSet</code> refers to <a href="http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ImmutableSet.html">this Guava collection</a>, and <code>Option</code> is some
+enum defined by the application. In Java, all enums are automatically equipped with a
+static <code>values()</code> method, which returns an array of all the values on that enum, and so
+the intent here is to build a set containing all the enum values and compare that against
+the set built up by the test&rsquo;s setup logic.</p>
+<p>Digging through the error logs of the coverage run, the error looked liked this:</p>
+<pre><code>java.lang.AssertionError: expected:&lt;[Lcom.google.ads.whatever.Option;@12345678&gt; but was:&lt;[FOO, BAR, BAZ]&gt;
+       at OptionsPageTest.testAllOptionsAreVisible(OptionsPageTest.java:42]
+</code></pre><p>If you&rsquo;re a Java person, the problem is fairly obvious; the thing on the left (corresponding to the first argument
+to <code>assertEquals</code>) is an <code>ImmutableSet&lt;Option[]&gt;</code> containing the result of calling <code>values()</code>,
+instead of an <code>ImmutableSet&lt;Option&gt;</code> containing a copy of the array. If you look at the docs linked above,
+you&rsquo;ll notice that <code>ImmutableSet</code> doesn&rsquo;t actually have
+an <code>of(E[])</code> method, which means that it wouldn&rsquo;t copy the contents of the array. Instead the type inference
+comes up with <code>ImmutableSet&lt;Option[]&gt;</code> and the method called is the <code>of(E)</code> method where <code>E = Option[]</code>.</p>
+<p>So the fix was to use <code>copyOf</code> instead of <code>of</code>, and that&rsquo;s that. But now it seemed like the test shouldn&rsquo;t have
+been passing in the first place, even during regular runs, since it was relying on this non-existent <code>of(E[])</code> method
+that copies arrays. So what was going on really?</p>
+<p>This requires a bit of background on GWT. GWT is a set of tools to write web apps, and its main premise is that
+it&rsquo;s based on a Java to JavaScript compiler. You write apps in Java against a subset of the standard library, plus
+a bunch of GWT-specific libraries, and the compiler takes in your Java source (not the compiled class files),
+does a whole bunch of very aggressive optimizations, and spits out JavaScript.</p>
+<p>Since the compiler takes in Java source code, it can&rsquo;t deal with native methods, which are common in the standard
+library classes. It can also be useful to reimplement standard classes in such a way as to take advantage of
+JavaScript features and browser APIs &ndash; implementing <code>ArrayList</code> in terms of a JavaScript <code>Array</code>, for instance.
+Given this, GWT has a notion of <em>emulated classes</em>; classes are reimplemented in GWT-friendly Java,
+<a href="http://code.google.com/p/google-web-toolkit-doc-1-5/wiki/DevGuideModuleXml#Overriding_one_package_implementation_with_another">a special directive</a> can be passed to the GWT compiler to let it find the emulated source,
+and the emulated classes are compiled to JavaScript alongside application code.
+GWT includes emulated versions of <a href="http://www.gwtproject.org/doc/latest/RefJreEmulation.html">a subset of the standard library</a>, and the abovementioned directive
+is also available for applications or other libraries to use.</p>
+<p>As it happens, one of these libraries was Guava &ndash; several Guava collections, including <code>ImmutableSet</code>, have
+emulated versions for use by GWT applications.</p>
+<p>Switching gears slightly, one of the big selling points of GWT when it came out was that it was compatible with
+a lot of popular Java tools &ndash; you could step through your app using Eclipse&rsquo;s debugger, run tests
+with JUnit, and measure code coverage using <a href="http://emma.sourceforge.net/">Emma</a>, a popular open source Java coverage tool.</p>
+<p>To enable this, even though GWT application code ran as JavaScript in a browser in production, it could also
+be made to run as Java bytecode in a JVM in order to be more amenable to Java-based tools. Since the GWT compiler
+has all the source, it can just forward it along to a Java compiler and execute the resulting
+bytecode. There is just one snag, which is that GWT code can execute native JavaScript via GWT&rsquo;s
+<a href="http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsJSNI.html">JavaScript native interface (JSNI)</a> (either directly, or by calling into GWT libraries).
+For those cases, GWT supports <a href="http://www.gwtproject.org/javadoc/latest/com/google/gwt/junit/client/GWTTestCase.html">fancy JUnit integration</a> where the code still runs as Java,
+except that a browser is brought up (either an emulated in-memory browser, or a real headless browser), native
+JavaScript methods are injected into it, and those native methods have their bytecode rewritten so that they use
+special wrappers that call the corresponding methods in the browser.</p>
+<p>(As you might imagine, this is quite a bit slower &ndash; it&rsquo;s often not necessary as big chunks of testable code
+consist of relatively isolated application logic and can just run as plain Java instead of this hybrid mode.
+GWT also supports a &ldquo;web mode&rdquo; when the tests run as full on JavaScript &ndash; this is even slower, but is useful
+to ward against possible behavior differences between Java and JavaScript.)</p>
+<p>Now Emma is a coverage tool that works with JVM bytecode &ndash; in a manner similar to what I described in <a href="/blog/2013/05/03/writing-a-code-coverage-tool">my last post</a>,
+it instruments class files, so that as they run, they create some files containing coverage data,
+which are later picked up to produce coverage reports. GWT&rsquo;s Emma support is the aspect of this whole thing that I
+understand least. (There exists a wiki page with <a href="http://code.google.com/p/google-web-toolkit/wiki/EmmaSupport">some notes on Emma support</a>, but it&rsquo;s not very enlightening).
+It seems that whatever magic GWT needs to perform to play nice with Emma is not done for emulated classes.
+The only thing I could find related to this is <a href="https://groups.google.com/forum/#!msg/scalagwt/TE5O9hDTTd4/ENvpFnK2AkkJ">this old thread from the Scala+GWT project</a>,
+which also isn&rsquo;t very enlightening, but seems to say that when Emma support was being developed it was decided that
+emulated classes weren&rsquo;t worth supporting since, among other things, they weren&rsquo;t used much.
+In any case, this means that for coverage runs, not only does the code run as Java in a JVM, but it runs against
+the &ldquo;real&rdquo; versions of classes.</p>
+<p>The final piece of the puzzle is that this mystery <code>ImmutableSet.of(E[])</code> method <em>used</em> to exist; you can browse
+<a href="http://docs.guava-libraries.googlecode.com/git-history/v10.0/javadoc/com/google/common/collect/ImmutableSet.html">an old version of the docs</a> to see it. It was deprecated for a long time and eventually removed.
+However, for whatever reason, the GWT-emulated version was not kept in sync with these changes. So the GWT-emulated
+version still had that method, and this was why the regular test run, which ran against the emulated classes, passed.
+The coverage run, which ran against the &ldquo;real&rdquo; Guava, failed.</p>
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        <span class="button previous">
+            <a href="https://ismail.badawi.io/blog/the-compositional-nature-of-vim/">
+                <span class="button__icon">←</span>
+                <span class="button__text">The Compositional Nature of Vim</span>
+            </a>
+        </span>
+        
+        
+        <span class="button next">
+            <a href="https://ismail.badawi.io/blog/writing-a-code-coverage-tool/">
+                <span class="button__text">Writing a Code Coverage Tool</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+<div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "isbadawi" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="https://ismail.badawi.io/assets/main.js"></script>
+<script src="https://ismail.badawi.io/assets/prism.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

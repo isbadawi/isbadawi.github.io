@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>java on Ismail Badawi</title>
+    <link>https://ismail.badawi.io/tags/java/</link>
+    <description>Recent content in java on Ismail Badawi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 03 May 2013 00:00:00 +0000</lastBuildDate><atom:link href="https://ismail.badawi.io/tags/java/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Writing a Code Coverage Tool</title>
+      <link>https://ismail.badawi.io/blog/writing-a-code-coverage-tool/</link>
+      <pubDate>Fri, 03 May 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://ismail.badawi.io/blog/writing-a-code-coverage-tool/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Disclaimer: I&amp;rsquo;m not quite sure who the audience is for this. I guess it&amp;rsquo;s
+describing a fun little project I put together, but it&amp;rsquo;s also written kind of
+like a tutorial, so you can maybe follow along. I don&amp;rsquo;t think it&amp;rsquo;s particularly
+beginner-friendly, though. Some knowledge of Java is assumed, but not much.
+The code is available &lt;a href=&#34;https://github.com/isbadawi/coverage-example&#34;&gt;on github&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Code coverage is a software metric that measures how much, and which parts, of the source code
+of a program were exercised in a given execution of that program.
+There are many different flavors of coverage data, for example
+tracking which lines or statements were executed, which
+functions were called, which branches or control flow paths were taken. In
+this post, we&amp;rsquo;ll walk through writing a simplistic coverage collection tool
+for Java.&lt;/p&gt;</description>
+      <content>&lt;p&gt;&lt;em&gt;Disclaimer: I&amp;rsquo;m not quite sure who the audience is for this. I guess it&amp;rsquo;s
+describing a fun little project I put together, but it&amp;rsquo;s also written kind of
+like a tutorial, so you can maybe follow along. I don&amp;rsquo;t think it&amp;rsquo;s particularly
+beginner-friendly, though. Some knowledge of Java is assumed, but not much.
+The code is available &lt;a href=&#34;https://github.com/isbadawi/coverage-example&#34;&gt;on github&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Code coverage is a software metric that measures how much, and which parts, of the source code
+of a program were exercised in a given execution of that program.
+There are many different flavors of coverage data, for example
+tracking which lines or statements were executed, which
+functions were called, which branches or control flow paths were taken. In
+this post, we&amp;rsquo;ll walk through writing a simplistic coverage collection tool
+for Java.&lt;/p&gt;
+&lt;p&gt;The typical way code coverage is measured is by taking the input program
+and instrumenting it so that as it executes, it records somewhere which parts
+are executing. For simplicity, we&amp;rsquo;ll focus on line coverage. In that case,
+the instrumented code might maintain a little table in memory, mapping
+file names and line numbers to booleans representing whether that line
+in that file has been executed. As each statement is executed, the appropriate
+entry in the table will be updated.&lt;/p&gt;
+&lt;p&gt;Here&amp;rsquo;s a simple example, the standard hello world in Java:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; io.badawi.hello&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Hello&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; args&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    System&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hello, world&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We&amp;rsquo;d like to rewrite this so that after it&amp;rsquo;s done executing, it will have
+produced a little coverage report in a text file, saying that line 5 was
+executed. The rewritten class might look like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; io.badawi.hello&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; io.badawi.coverage.runtime.CoverageTracker&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Hello&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; args&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    System&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hello, world&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    CoverageTracker&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;markExecuted&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/path/to/Hello.java&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; 5&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+
+    CoverageTracker&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;writeCoverageToFile&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Straightforward, right?  After a line executes, we mark it as executed.
+Then, before the program exits, we write out the coverage information somewhere.
+Getting a coverage tool to generate this code automatically might be a
+bit involved, but conceptually what we&amp;rsquo;re doing should be easy to understand.&lt;/p&gt;
+&lt;p&gt;The implementation of &lt;code&gt;CoverageTracker&lt;/code&gt; could be as simple as this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; io.badawi.coverage.runtime&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; java.util.Map&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; java.util.HashMap&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;CoverageTracker&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;// Maps filenames and line numbers to true (executed) or false (not executed).
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; Map&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Map&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Integer&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Boolean&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt; coverage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; HashMap&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Map&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Integer&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Boolean&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;();&lt;/span&gt;
+
+  &lt;span style=&#34;color:#75715e&#34;&gt;// Serializes coverage in some format; we&amp;#39;ll revisit this.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;writeCoverageToFile&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;markExecuted&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(!&lt;/span&gt;coverage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;contains&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;))&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+      coverage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;put&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; HashMap&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Integer&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Boolean&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;());&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    coverage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;put&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;line&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;  
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;(n.b: although we&amp;rsquo;ll use Guava in other parts of the code,
+&lt;code&gt;CoverageTracker&lt;/code&gt; is used by the instrumented code, and it might be
+awkward to add a runtime dependency on Guava just to save a few lines of code here.
+This is why I&amp;rsquo;m using a &lt;code&gt;Map&amp;lt;String, Map&amp;lt;Integer, Boolean&amp;gt;&amp;gt;&lt;/code&gt; instead
+of a &lt;code&gt;Table&amp;lt;String, Integer, Boolean&amp;gt;&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;There is just a slight problem. In general, we can&amp;rsquo;t really know ahead of time when or where
+a program will terminate, so it won&amp;rsquo;t do to just call &lt;code&gt;writeCoverageToFile&lt;/code&gt; at the end of
+&lt;code&gt;main&lt;/code&gt;. The easiest way to ensure the coverage report is always generated to put the
+call to &lt;code&gt;writeCoverageToFile&lt;/code&gt; inside a JVM shutdown hook, so we can add this static initializer
+block to &lt;code&gt;CoverageTracker&lt;/code&gt;, and drop the calls in the instrumented code:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  Runtime&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getRuntime&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addShutdownHook&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; Thread&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;@Override&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;run&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+      writeCoverageToFile&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;});&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;instrumenting-code&#34;&gt;Instrumenting code&lt;/h2&gt;
+&lt;p&gt;So far so good, but how do we actually do this rewriting automatically?
+We need a solution that allows us to insert method calls at the right
+place.&lt;/p&gt;
+&lt;p&gt;The wrong way to do this is to use some complicated regex-based solution.
+The right way to do this is to parse the code, and work with an
+abstract syntax tree representation. That way, we can work at the level
+of statements and expressions, and not the level of lines in a file, so
+manipulating the program will be simpler. We can transform the syntax tree
+as we see fit and pretty-print (or unparse) it to get back corresponding
+source code.&lt;/p&gt;
+&lt;h2 id=&#34;aside-javaparser&#34;&gt;Aside: javaparser&lt;/h2&gt;
+&lt;p&gt;Writing a parser for a language like Java is way outside the scope of this
+blog post. Instead, we&amp;rsquo;ll use a library. There are a few of these for most
+languages; if not, you can probably find a parser generator and a complete
+grammar. I&amp;rsquo;m going to use &lt;a href=&#34;https://github.com/matozoid/javaparser&#34;&gt;javaparser&lt;/a&gt;, mostly for simplicity;
+it looks nice and standalone. The main downside is it only supports Java 1.5.
+The documentation is also kind of scarce.&lt;/p&gt;
+&lt;p&gt;The hello world example for javaparser might look like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; io.badawi.hello&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; japa.parser.JavaParser&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; japa.parser.ParseException&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; japa.parser.ast.CompilationUnit&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; java.io.StringReader&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;HelloJavaparser&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; args&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;throws&lt;/span&gt; ParseException &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    CompilationUnit unit &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; JavaParser&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;parse&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringReader&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringBuilder&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;package io.badawi.hello;\n\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;public class Hello {\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;  public static void main(String[] args) {\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;    System.out.println(\&amp;#34;hello, world\&amp;#34;);\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;  }\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;}\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()));&lt;/span&gt;
+
+    System&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;unit&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;It parses a source file (given here as a string), and gets at an object
+of type &lt;code&gt;CompilationUnit&lt;/code&gt;, which is the root of the abstract syntax tree representation.
+Each node in the tree overrides &lt;code&gt;toString()&lt;/code&gt; to do pretty-printing, so running this just
+spits out the class declaration for &lt;code&gt;Hello&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-text&#34; data-lang=&#34;text&#34;&gt;package io.badawi.hello;
+
+public class Hello {
+
+    public static void main(String[] args) {
+        System.out.println(&amp;#34;hello, world&amp;#34;);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Going slightly further, we&amp;rsquo;ll modify this example to add a statement
+to the main method before getting the text back. It looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; io.badawi.hello&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;// snip imports
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;HelloJavaparser&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; args&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;throws&lt;/span&gt; ParseException &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    CompilationUnit unit &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; JavaParser&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;parse&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringReader&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringBuilder&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;package io.badawi.hello;\n\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;public class Hello {\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;  public static void main(String[] args) {\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;    System.out.println(\&amp;#34;hello, world\&amp;#34;);\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;  }\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;}\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()));&lt;/span&gt;
+              
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Create an AST fragment representing System.out.println(&amp;#34;hello, javaparser&amp;#34;)
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    NameExpr systemOut &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ASTHelper&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;createNameExpr&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;System.out&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    MethodCallExpr call &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; MethodCallExpr&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;systemOut&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;println&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    ASTHelper&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addArgument&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;call&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringLiteralExpr&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hello, javaparser&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;));&lt;/span&gt;
+                              
+    &lt;span style=&#34;color:#75715e&#34;&gt;// Add this statement to the main method
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    TypeDeclaration helloClass &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; unit&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getTypes&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;0&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    MethodDeclaration mainMethod &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;MethodDeclaration&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; hello&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getMembers&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;0&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    ASTHelper&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addStmt&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;mainMethod&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getBody&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(),&lt;/span&gt; call&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+
+    System&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;unit&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;By creating AST nodes and connecting them together, we can synthesize new code. Here,
+we create the &lt;code&gt;System.out.println(&amp;quot;hello, javaparser&amp;quot;)&lt;/code&gt; method call by creating a
+&lt;code&gt;MethodCallExpr&lt;/code&gt; node that has &lt;code&gt;System.out&lt;/code&gt; as a receiver, &lt;code&gt;println&lt;/code&gt; as the method name,
+and the string literal &lt;code&gt;&amp;quot;hello, javaparser&amp;quot;&lt;/code&gt; as argument.&lt;/p&gt;
+&lt;p&gt;Starting with the &lt;code&gt;CompilationUnit&lt;/code&gt; object, we can navigate the code programmatically,
+and so get at the &lt;code&gt;MethodDeclaration&lt;/code&gt; object corresponding to the &lt;code&gt;main&lt;/code&gt; method; from
+there, we can get at the body, which is a &lt;code&gt;Block&lt;/code&gt; object containing a list of statements,
+and add our newly created statement to it.&lt;/p&gt;
+&lt;p&gt;(javaparser has this annoying thing where it initializes collections to &lt;code&gt;null&lt;/code&gt; instead of using
+empty collections. The &lt;code&gt;ASTHelper.addStmt&lt;/code&gt; method adds a statement to a block, making
+sure to create the list if it&amp;rsquo;s null. Similarly &lt;code&gt;ASTHelper.addArgument&lt;/code&gt; does the same for
+argument lists of method calls. These functions shouldn&amp;rsquo;t be necessary but that&amp;rsquo;s how the API is.)&lt;/p&gt;
+&lt;p&gt;Running this spits out the following class:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-text&#34; data-lang=&#34;text&#34;&gt;package io.badawi.hello;
+
+public class Hello {
+
+    public static void main(String[] args) {
+        System.out.println(&amp;#34;hello, world&amp;#34;);
+        System.out.println(&amp;#34;hello, javaparser&amp;#34;);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;which is what we wanted.&lt;/p&gt;
+&lt;p&gt;Okay, so now we know how to parse Java code and get an AST, how to unparse an AST and get back
+Java code, and the basics of how to synthesize new code and modify the AST. Now what we&amp;rsquo;ll want
+to do is something like &amp;ldquo;for every statement, do X&amp;rdquo;.
+To achieve this, javaparser has the AST nodes implement &lt;a href=&#34;http://en.wikipedia.org/wiki/Visitor_pattern&#34;&gt;the Visitor pattern&lt;/a&gt;;
+this is nice because we don&amp;rsquo;t have to manually traverse the tree and do &lt;code&gt;instanceof&lt;/code&gt; checks or whatever;
+we can just implement an interface that specifies what we want to do when we encounter each kind of node,
+and the visitor machinery will take care of traversing and dispatching.&lt;/p&gt;
+&lt;p&gt;For example, we could replace the &lt;code&gt;System.out.println(unit.toString());&lt;/code&gt; at the end of the last
+example with this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;unit&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;accept&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; VoidVisitorAdapter&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Object&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;@Override&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;visit&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;MethodCallExpr node&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Object arg&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    System&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;found method call: &amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; node&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;},&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;accept&lt;/code&gt; takes care of traversing the AST,
+the given visitor. Here, we just pretty-print every method call we
+see, so the output is:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-text&#34; data-lang=&#34;text&#34;&gt;found method call: System.out.println(&amp;#34;hello, world&amp;#34;)
+found method call: System.out.println(&amp;#34;hello, javaparser&amp;#34;)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;(n.b. All the &lt;code&gt;Visitor&lt;/code&gt; classes have a generic type parameter; each &lt;code&gt;visit&lt;/code&gt; method
+takes an extra argument of that type, and the &lt;code&gt;accept&lt;/code&gt; method also takes
+a value of that type and passes it around everywhere.
+I guess this can be useful to pass around state that is
+built up during the traversal, but for complicated visitors I tend to use
+a proper, non-anonymous class, and use member variables to keep state. So
+here and in what follows I&amp;rsquo;ll always use &lt;code&gt;Object&lt;/code&gt; as the type parameter, pass
+in &lt;code&gt;null&lt;/code&gt; to &lt;code&gt;accept&lt;/code&gt;, and ignore the extra argument to the &lt;code&gt;visit&lt;/code&gt; methods.)&lt;/p&gt;
+&lt;h2 id=&#34;back-to-instrumentation&#34;&gt;Back to instrumentation&lt;/h2&gt;
+&lt;p&gt;Now what we&amp;rsquo;re looking to do is traverse the tree, find all the statements,
+and insert our coverage tracking statements after them. (To start with, we&amp;rsquo;ll
+only handle expression statements, since that&amp;rsquo;s the only kind of statement that
+appears in the hello world example.)&lt;/p&gt;
+&lt;p&gt;This isn&amp;rsquo;t as straightforward as it sounds, because if we do this naively
+&amp;ndash; given a statement in the tree, walk up the tree to find the statement
+list containing it, and insert our coverage tracking statement after it
+&amp;ndash; we&amp;rsquo;d be modifying lists of statements as we&amp;rsquo;re iterating over them, which
+causes trouble.&lt;/p&gt;
+&lt;p&gt;javaparser already contains infrastructure to modify ASTs, in the form of a special
+visitor implementation called &lt;code&gt;ModifierVisitorAdapter&lt;/code&gt;, which has each &lt;code&gt;visit&lt;/code&gt;
+method return an AST node to serve as the replacement for the current node. So we can replace an
+arbitrary node with another. We can use this facility to emulate inserting a statement
+after the current statement; just replace the statement with a block statement
+containing it and its new successor.&lt;/p&gt;
+&lt;p&gt;Given this, here&amp;rsquo;s a first go at instrumenting our hello world example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;package&lt;/span&gt; io.badawi.coverage&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;// snip imports
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;CoverageVisitor&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;extends&lt;/span&gt; ModifierVisitorAdapter&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Object&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;// AST nodes don&amp;#39;t know which file they come from, so we&amp;#39;ll pass the information in
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; String filename&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;CoverageVisitor&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String filename&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;this&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;filename&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; filename&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;@Override&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; Node &lt;span style=&#34;color:#a6e22e&#34;&gt;visit&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;ExpressionStmt node&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Object arg&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    BlockStmt block &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; BlockStmt&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
+    ASTHelper&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addStmt&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;block&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; n&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    ASTHelper&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addStmt&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;block&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; makeCoverageTrackingCall&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; node&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getBeginLine&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()));&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; block&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; Statement &lt;span style=&#34;color:#a6e22e&#34;&gt;makeCoverageTrackingCall&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    NameExpr coverageTracker &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ASTHelper&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;createNameExpr&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;io.badawi.coverage.runtime.CoverageTracker&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    MethodCallExpr call &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; MethodCallExpr&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;coverageTracker&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;markExecuted&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    ASTHelper&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addArgument&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;call&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringLiteralExpr&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;));&lt;/span&gt;
+    ASTHelper&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;addArgument&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;call&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; IntegerLiteralExpr&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;valueOf&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;line&lt;span style=&#34;color:#f92672&#34;&gt;)));&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; ExpressionStmt&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;call&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;The key point here is that parsers retain information about the positions (line and column offsets)
+of AST nodes, typically to generate useful error messages. The call to &lt;code&gt;node.getBeginLine()&lt;/code&gt; returns
+the line in the file where the code fragment corresponding to that node begins.&lt;/li&gt;
+&lt;li&gt;The path of the source file can&amp;rsquo;t be known in general (because we could be parsing an arbitrary string, as we did above), so we
+pass it in ourselves.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;makeCoverageTrackingCall&lt;/code&gt; just creates a call to &lt;code&gt;markExecuted&lt;/code&gt;, with the filename and line number
+as arguments. Note that we insert the fully qualified name of &lt;code&gt;CoverageTracker&lt;/code&gt; there instead of adding
+an import; this wards against the case where the subject code is already using the name &lt;code&gt;CoverageTracker&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;The &lt;code&gt;visit&lt;/code&gt; method runs whenever the traversal encounters an expression statement
+(for example, a standalone method call) and returns a block statement containing the original statement,
+followed by the call to &lt;code&gt;markExecuted&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;We can equip this class with a &lt;code&gt;main&lt;/code&gt; method similar to our previous examples:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; args&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;throws&lt;/span&gt; ParseException &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  CompilationUnit unit &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; JavaParser&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;parse&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringReader&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringBuilder&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;package io.badawi.hello;\n\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;public class Hello {\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;  public static void main(String[] args) {\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;    System.out.println(\&amp;#34;hello, world\&amp;#34;);\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;  }\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;}\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()));&lt;/span&gt;
+
+  unit&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;accept&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; CoverageVisitor&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/path/to/Hello.java&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;),&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+
+  System&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;unit&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Running this prints out&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-text&#34; data-lang=&#34;text&#34;&gt;package io.badawi.hello;
+
+public class Hello {
+
+     public static void main(String[] args) {
+         {
+             System.out.println(&amp;#34;hello, world&amp;#34;);
+             io.badawi.coverage.runtime.CoverageTracker.markExecuted(&amp;#34;/path/to/Hello.java&amp;#34;, 5);
+         }
+     }
+}
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;which is what we wanted.&lt;/p&gt;
+&lt;h2 id=&#34;baseline-coverage&#34;&gt;Baseline coverage&lt;/h2&gt;
+&lt;p&gt;Let&amp;rsquo;s go back to our hello world example for a bit. Notice that even though there are seven
+lines in this file, we really only care about line 5. Line 5 is the only executable line;
+the rest are noise.  If line 5 is executed, logically we should say 100% of the class was covered
+(as opposed to 14.28%, or 1/7). It&amp;rsquo;s not quite enough, then, to know that line
+5 was executed; to produce an accurate coverage report, we have
+to know also which lines &lt;em&gt;could&lt;/em&gt; have been executed (in this case, only line 5).
+In doing this, we&amp;rsquo;ll want to ignore things like package declarations, imports,
+blank lines, comments and so on.&lt;/p&gt;
+&lt;p&gt;Given what we have so far, how do we do this? Which lines are executable?
+It should be easy enough to see that the executable lines are precisely those lines for which
+we&amp;rsquo;ve created a &lt;code&gt;markExecuted&lt;/code&gt; call. We can reuse our &lt;code&gt;CoverageTracker&lt;/code&gt; and just mark the line
+as executable at that point:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; Statement &lt;span style=&#34;color:#a6e22e&#34;&gt;makeCoverageTrackingCall&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  CoverageTracker&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;markExecutable&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;// same as before
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;where &lt;code&gt;markExecutable&lt;/code&gt; is implemented the same way as &lt;code&gt;markExecuted&lt;/code&gt;, only with &lt;code&gt;false&lt;/code&gt;
+instead of &lt;code&gt;true&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;markExecutable&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(!&lt;/span&gt;coverage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;contains&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;))&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    coverage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;put&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; HashMap&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Integer&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Boolean&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;());&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+  coverage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;put&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;line&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;   
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Then the coverage report will be generated via the same shutdown hook we added earlier (but
+at instrumentation time, not a runtime).&lt;/p&gt;
+&lt;h2 id=&#34;generating-a-coverage-report&#34;&gt;Generating a coverage report&lt;/h2&gt;
+&lt;p&gt;We&amp;rsquo;re going to generate our report in lcov format. This format is
+understood by tools like &lt;code&gt;lcov&lt;/code&gt; and &lt;code&gt;genhtml&lt;/code&gt;, which can use it to
+spit out a nice HTML report where the source code is annotated
+with colors that show which lines were executed.&lt;/p&gt;
+&lt;p&gt;The format isn&amp;rsquo;t very complicated. It consists of a series of records,
+one for each source file. Within each record, you specify which lines
+were executed. You can also specify things like function and branch
+coverage, but we won&amp;rsquo;t use those features.&lt;/p&gt;
+&lt;p&gt;An lcov record for our hello world example might look like&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-text&#34; data-lang=&#34;text&#34;&gt;SF:/path/to/Hello.java
+DA:3,1
+end_of_record
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The &lt;code&gt;SF&lt;/code&gt; line signals the start of a new record for the source file
+at the given path, and &lt;code&gt;end_of_record&lt;/code&gt; (obviously) signals the end
+of the record. For each executable line, a &lt;code&gt;DA&lt;/code&gt; line specifies the
+line number and the number of times that line was executed. In our case,
+since we&amp;rsquo;re only tracking whether a line was executed and not how many
+times, we&amp;rsquo;ll only ever put a 1 or 0 there. It wouldn&amp;rsquo;t be difficult to
+change the &lt;code&gt;CoverageTracker&lt;/code&gt; implements to keep a count, though.&lt;/p&gt;
+&lt;p&gt;With that in mind, generating a coverage report is straightforward
+and looks like this.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;writeCoverageToFile&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  String lcovCoverage &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; generateLcov&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
+  String coverageReportPath &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; System&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getProperty&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;coverage.report.path&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;coverage_report.lcov&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+  FileWriter writer &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    writer &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; FileWriter&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;coverageReportPath&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    writer&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;write&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;lcovCoverage&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;IOException e&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; RuntimeException&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;e&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;finally&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+      writer&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;close&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;IOException e&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; RuntimeException&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;e&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; String &lt;span style=&#34;color:#a6e22e&#34;&gt;generateLcov&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  StringBuilder sb &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; StringBuilder&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String filename &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; coverage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;keySet&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;())&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    sb&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;SF:&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; filename &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;Map&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Entry&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Integer&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Boolean&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; line &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; coverage&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;entrySet&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;())&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+      sb&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;format&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;DA:%d,%d\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getKey&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(),&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getValue&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;?&lt;/span&gt; 1 &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; 0&lt;span style=&#34;color:#f92672&#34;&gt;));&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    sb&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;end_of_record\n&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; sb&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;();&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Note how we read the output path from the &lt;code&gt;coverage.report.path&lt;/code&gt; property; this is
+useful since we generate two reports, one during instrumentation and one during
+execution.&lt;/p&gt;
+&lt;p&gt;(&lt;code&gt;writeCoverageToFile&lt;/code&gt; is a bit awkward, again because I don&amp;rsquo;t want
+to use Guava in the runtime code. It could just be a call to
+&lt;code&gt;Files.write&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;We&amp;rsquo;re close to the payoff. We can change the &lt;code&gt;main&lt;/code&gt; method of
+&lt;code&gt;CoverageVisitor&lt;/code&gt; to take a class as a command line argument
+instead of hard coding in our &lt;code&gt;Hello&lt;/code&gt; class. Since for now we&amp;rsquo;re
+assuming a single input class, we&amp;rsquo;ll just print the instrumented
+class to standard output and let the caller decide where to put it.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; args&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;throws&lt;/span&gt; IOException&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; ParseException &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    File file &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; File&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;args&lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;0&lt;span style=&#34;color:#f92672&#34;&gt;]);&lt;/span&gt;
+    CompilationUnit unit &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; JavaParser&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;parse&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; FileReader&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;file&lt;span style=&#34;color:#f92672&#34;&gt;));&lt;/span&gt;
+    unit&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;accept&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; CoverageVisitor&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;file&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;getAbsolutePath&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;()),&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+    System&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;unit&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;());&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now we should be able to instrument, compile and execute a class,
+and use &lt;code&gt;genhtml&lt;/code&gt; to visualize the resulting coverage report. The
+following assumes &lt;code&gt;CoverageVisitor&lt;/code&gt; and &lt;code&gt;CoverageTracker&lt;/code&gt; were compiled
+and the class files are in a directory called &lt;code&gt;bin&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ pwd
+/Users/isbadawi/Documents/workspace/coverage-example
+$ cat Hello.java
+public class Hello &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  public static void main&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; args&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+    System.out.println&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hello, world&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;;
+  &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+$ mkdir instrumented
+$ java -cp bin -Dcoverage.report.path&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;instrumented/baseline_coverage.lcov &lt;span style=&#34;color:#ae81ff&#34;&gt;\
+&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;&lt;/span&gt;       io.badawi.coverage.CoverageVisitor Hello.java &amp;gt; instrumented/Hello.java
+$ cd instrumented
+$ cat baseline_coverage.lcov
+SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
+DA:3,0
+end_of_record      
+$ cat Hello.java
+public class Hello &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+
+    public static void main&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String&lt;span style=&#34;color:#f92672&#34;&gt;[]&lt;/span&gt; args&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+        &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+            System.out.println&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hello, world&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;;
+            io.badawi.coverage.runtime.CoverageTracker.markExecuted&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;/Users/isbadawi/Documents/workspace/coverage-example/Hello.java&amp;#34;&lt;/span&gt;, 3&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;;
+        &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+$ javac -cp .:../bin Hello.java &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; java -cp .:../bin Hello
+hello, world
+$ cat coverage_report.lcov
+SF:/Users/isbadawi/Documents/workspace/coverage-example/Hello.java
+DA:3,1
+end_of_record
+$ lcov -a baseline_coverage.lcov -a coverage_report.lcov -o combined_coverage.lcov
+$ genhtml combined_coverage.lcov -o report
+$ cd report &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port &lt;span style=&#34;color:#ae81ff&#34;&gt;8000&lt;/span&gt; ...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We use the &lt;code&gt;lcov&lt;/code&gt; command to merge together our baseline and runtime coverage
+reports. (In this case, the runtime coverage report is enough, but in general
+this step is necessary). Then we feed the merged report to &lt;code&gt;genhtml&lt;/code&gt;, which
+generates a little HTML report. &lt;code&gt;python -m SimpleHTTPServer&lt;/code&gt; just serves up the
+contents of the current directory on port 8000. Pointing our browser to
+&lt;code&gt;localhost:8000&lt;/code&gt; should then show a nice coverage report (which I&amp;rsquo;ve placed
+&lt;a href=&#34;https://ismail.badawi.io/coverage-report&#34;&gt;here&lt;/a&gt;).&lt;/p&gt;
+&lt;h2 id=&#34;handling-everything&#34;&gt;Handling everything&lt;/h2&gt;
+&lt;p&gt;Now that&amp;rsquo;s we&amp;rsquo;ve got this running end-to-end as sort of proof of concept,
+we can go back and tie up some loose ends. &lt;code&gt;CoverageVisitor&lt;/code&gt; only instruments
+expression statements, for simplicity and because that&amp;rsquo;s the only kind of
+statement the hello world example contained. We&amp;rsquo;d like to extend our approach
+to handle everything.&lt;/p&gt;
+&lt;p&gt;If we worked at level of statements, we&amp;rsquo;d need to write code to handle all the different
+kinds of statements &amp;ndash; if statements, for loops, while loops, throw statements,
+assert statements, and so on. For each of these we&amp;rsquo;d need to come up with a
+transformation that inserted coverage tracking calls in the right place. A simpler
+solution would be to work with expressions, and try to come up with a single transformation
+that works for all expressions.&lt;/p&gt;
+&lt;p&gt;One idea would be to take our &lt;code&gt;markExecuted&lt;/code&gt; method and have it take an expression
+as an argument and return its value, like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;T&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; T &lt;span style=&#34;color:#a6e22e&#34;&gt;markExecuted&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;String filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; T expression&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  markExecuted&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;filename&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; line&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; expression&lt;span style=&#34;color:#f92672&#34;&gt;;&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Then you could essentially wrap expressions in a call to &lt;code&gt;markExecuted&lt;/code&gt;; the
+expression would evaluate to the same value, and coverage would be tracked.
+For instance, this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;1 &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt; 2&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;// ...
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;would become this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;CoverageTracker&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;markExecuted&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;/* file */&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;/* line */&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; 1 &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt; 2&lt;span style=&#34;color:#f92672&#34;&gt;))&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;// ...
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;and the same transformation would apply for loop conditions, assertions,
+and so on, without needing to write different cases for them.&lt;/p&gt;
+&lt;p&gt;There is just a small issue, which is that this won&amp;rsquo;t work if the
+expression has type &lt;code&gt;void&lt;/code&gt;, since you can&amp;rsquo;t pass
+something of type &lt;code&gt;void&lt;/code&gt; to a method. This turns out not to be a huge deal; we don&amp;rsquo;t need
+to perform any sort of type inference or anything like that. Expressions of type &lt;code&gt;void&lt;/code&gt; can only
+occur in two places: expression statements (like our call to &lt;code&gt;System.out.println&lt;/code&gt;),
+and for loop headers (in the initialization and increment sections). We can can just
+handle those two cases separately, and we&amp;rsquo;ll be fine.&lt;/p&gt;
+&lt;p&gt;We already took care of expression statements earlier, by inserting the coverage tracking
+call afterwards, as a separate statement. We can use the same sort of idea to take care
+of for loop headers. The initialization and increment sections include comma-separated
+lists of expressions; when considering expressions there, we can insert our coverage
+tracking call as the next element in the comma-separated list.&lt;/p&gt;
+&lt;p&gt;This should be good. Conceptually, it&amp;rsquo;s simpler than handling every statement separately.
+Unfortunately, the visitor machinery in javaparser doesn&amp;rsquo;t seem to have a mechanism for
+writing a single method that handles all kinds of expressions. The ugly, clumsy way
+around this is to write a &lt;code&gt;visit&lt;/code&gt; method for every different kind of expression, which
+looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-java&#34; data-lang=&#34;java&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;@Override&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; Node &lt;span style=&#34;color:#a6e22e&#34;&gt;visit&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;ArrayAccessExpr n&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Object arg&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; makeCoverageTrackingCall&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;n&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;@Override&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; Node &lt;span style=&#34;color:#a6e22e&#34;&gt;visit&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;ArrayCreationExpr n&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; Object arg&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; makeCoverageTrackingCall&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;n&lt;span style=&#34;color:#f92672&#34;&gt;);&lt;/span&gt;
+&lt;span style=&#34;color:#f92672&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;// 20-something identical cases
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;I don&amp;rsquo;t really like this, but conceptually it&amp;rsquo;s still simpler than handling statements
+separately. Even if we went the other way, we&amp;rsquo;d need to do this to properly handle assert and throw statements;
+we couldn&amp;rsquo;t insert a statement after, since it might not be executed.&lt;/p&gt;
+&lt;h2 id=&#34;where-to-go-from-here&#34;&gt;Where to go from here?&lt;/h2&gt;
+&lt;p&gt;That covers pretty much everything. We&amp;rsquo;ve put together a simplistic line coverage tool for Java, which works
+by instrumenting Java code as a source-to-source transformation. The complete code can be found &lt;a href=&#34;https://github.com/isbadawi/coverage-example&#34;&gt;on github&lt;/a&gt;.
+Some closing remarks:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The most popular Java coverage tool is probably &lt;a href=&#34;http://emma.sourceforge.net&#34;&gt;Emma&lt;/a&gt;. It works by instrumenting bytecode (.class files)
+instead of source code. This has a few advantages; for instance Emma provides a special classloader that can
+instrument code on the fly as it&amp;rsquo;s loaded, which we can&amp;rsquo;t really do with this approach. (The main benefit of this
+approach is that&amp;rsquo;s fairly accessible, and can be explained without requiring knowledge of JVM bytecode).&lt;/li&gt;
+&lt;li&gt;Not all coverage tools work this way; an interesting one to look at is &lt;a href=&#34;http://nedbatchelder.com/code/coverage&#34;&gt;coverage.py&lt;/a&gt;, which is based
+on &lt;a href=&#34;http://docs.python.org/2/library/sys.html#sys.settrace&#34;&gt;a hook provided by the python interpreter&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;</content>
+    </item>
+    
+  </channel>
+</rss>

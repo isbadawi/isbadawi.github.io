@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Automatic Directory Creation in Make :: Ismail Badawi</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="I like out-of-tree builds. Out-of-tree builds are nice for lots of reasons. You can have multiple builds of the same project coexisting side-by-side &amp;ndash; for example a debug build for development, a release build, and an instrumented build for code coverage runs. All the generated build artifacts are together underneath one directory which you can easily delete without having to maintain a make clean target, or place under .gitignore without having to maintain a growing set of patterns for the different kinds of artifacts. I was going to write a post about this, but came across this one by Jussi Pakkanen which covers a lot of the ground I would have, so I&amp;rsquo;ll just link to it here.
+Instead, this post is about an issue that arises when implementing out-of-tree builds in make, and the best approach I&amp;rsquo;ve found for dealing with it.
+" />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="https://ismail.badawi.io/blog/automatic-directory-creation-in-make/" />
+
+
+
+
+<link rel="stylesheet" href="https://ismail.badawi.io/assets/style.css">
+
+  <link rel="stylesheet" href="https://ismail.badawi.io/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon" href="https://ismail.badawi.io/img/apple-touch-icon-192x192.png">
+
+  <link rel="shortcut icon" href="https://ismail.badawi.io/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Automatic Directory Creation in Make">
+<meta property="og:description" content="I like out-of-tree builds. Out-of-tree builds are nice for lots of reasons. You can have multiple builds of the same project coexisting side-by-side &amp;ndash; for example a debug build for development, a release build, and an instrumented build for code coverage runs. All the generated build artifacts are together underneath one directory which you can easily delete without having to maintain a make clean target, or place under .gitignore without having to maintain a growing set of patterns for the different kinds of artifacts. I was going to write a post about this, but came across this one by Jussi Pakkanen which covers a lot of the ground I would have, so I&amp;rsquo;ll just link to it here.
+Instead, this post is about an issue that arises when implementing out-of-tree builds in make, and the best approach I&amp;rsquo;ve found for dealing with it.
+" />
+<meta property="og:url" content="https://ismail.badawi.io/blog/automatic-directory-creation-in-make/" />
+<meta property="og:site_name" content="Ismail Badawi" />
+
+  
+    <meta property="og:image" content="https://ismail.badawi.io/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+
+  <meta property="article:published_time" content="2017-03-28 00:00:00 &#43;0000 UTC" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="blue">
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    Ismail Badawi
+  </div>
+</a>
+
+    </div>
+    
+      <div class="menu-trigger">menu</div>
+    
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/about">About</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="https://ismail.badawi.io/blog/automatic-directory-creation-in-make/">Automatic Directory Creation in Make</a></h1>
+  <div class="post-meta">
+    
+      <span class="post-date">
+        2017-03-28 
+      </span>
+    
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="https://ismail.badawi.io/tags/code/">code</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/make/">make</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>I like out-of-tree builds. Out-of-tree builds are nice for lots of reasons. You
+can have multiple builds of the same project coexisting side-by-side &ndash; for
+example a debug build for development, a release build, and an instrumented
+build for code coverage runs. All the generated build artifacts are together
+underneath one directory which you can easily delete without having to maintain
+a <code>make clean</code> target, or place under <code>.gitignore</code> without having to maintain a
+growing set of patterns for the different kinds of artifacts. I was going to
+write a post about this, but came across
+<a href="http://voices.canonical.com/jussi.pakkanen/2013/04/16/why-you-should-consider-using-separate-build-directories/">this one by Jussi Pakkanen</a> which covers a lot of the
+ground I would have, so I&rsquo;ll just link to it here.</p>
+<p>Instead, this post is about an issue that arises when implementing out-of-tree
+builds in make, and the best approach I&rsquo;ve found for dealing with it.</p>
+<p>Let&rsquo;s say we have a hypothetical source tree like
+this with source files nested in different directories:</p>
+<pre><code>$ tree
+.
+├── foo
+│   └── bar
+│       └── baz.c
+├── main.c
+└── util
+    └── log.c
+
+3 directories, 3 files
+</code></pre><p>We&rsquo;d like our build directory to mirror this structure, like this:</p>
+<pre><code>$ tree build
+build
+├── foo
+│   └── bar
+│       └── baz.o
+├── main.o
+├── program
+└── util
+    └── log.o
+
+3 directories, 4 files
+</code></pre><p>The build system needs to ensure that each subdirectory within the build
+directory exists before we compile the source files inside it. We&rsquo;d like to
+write our makefile to achieve this in a nice way that won&rsquo;t require too much
+maintenance as our project grows. Here&rsquo;s a first attempt:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile">BUILD_DIR <span style="color:#f92672">:=</span> build
+
+SRCS <span style="color:#f92672">:=</span> main.c foo/bar/baz.c util/log.c
+OBJS <span style="color:#f92672">:=</span> <span style="color:#66d9ef">$(</span>addprefix <span style="color:#66d9ef">$(</span>BUILD_DIR<span style="color:#66d9ef">)</span>/,<span style="color:#66d9ef">$(</span>patsubst %.c,%.o,<span style="color:#66d9ef">$(</span>SRCS<span style="color:#66d9ef">)))</span>
+
+<span style="color:#a6e22e">.PHONY</span><span style="color:#f92672">:</span> program
+<span style="color:#a6e22e">program</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">$(</span>BUILD_DIR<span style="color:#66d9ef">)</span>/program
+
+<span style="color:#a6e22e">$(BUILD_DIR)/%.o</span><span style="color:#f92672">:</span> src/%.c
+	mkdir -p <span style="color:#66d9ef">$(</span>@D<span style="color:#66d9ef">)</span>
+	<span style="color:#66d9ef">$(</span>CC<span style="color:#66d9ef">)</span> -c $&lt; -o $@
+
+<span style="color:#a6e22e">$(BUILD_DIR)/program</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">$(</span>OBJS<span style="color:#66d9ef">)</span>
+	mkdir -p <span style="color:#66d9ef">$(</span>@D<span style="color:#66d9ef">)</span>
+	<span style="color:#66d9ef">$(</span>CC<span style="color:#66d9ef">)</span> $^ -o $@
+
+</code></pre></div><p>Here <code>$(@D)</code> is an <a href="https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html">automatic variable</a> which expands to the directory part
+of the target path. If we run <code>make program</code>, we get this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ make program
+mkdir -p build
+cc -c src/main.c -o build/main.o
+mkdir -p build/foo/bar
+cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+mkdir -p build/util
+cc -c src/util/log.c -o build/util/log.o
+mkdir -p build
+cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
+</code></pre></div><p>This does what we want, but it&rsquo;s a bit awkward. One issue is that in
+incremental builds, the <code>mkdir</code> steps will be run again, even though the
+directories definitely exist:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ touch src/foo/bar/baz.c
+$ make program
+mkdir -p build/foo/bar
+cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+mkdir -p build
+cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
+</code></pre></div><p>For this reason, we should instead modify the rule for object files to specify
+the target directory as a prerequisite. In particular, creating directories like
+this is the typical use case for <a href="https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html">order-only prerequisites</a>. So we&rsquo;d like to
+write something like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile"><span style="color:#a6e22e">$(BUILD_DIR)/%.o</span><span style="color:#f92672">:</span> src/%.c | <span style="color:#66d9ef">$(</span>@D<span style="color:#66d9ef">)</span>
+	<span style="color:#66d9ef">$(</span>CC<span style="color:#66d9ef">)</span> -c $&lt; -o $@
+</code></pre></div><p>One issue here is that automatic variables can&rsquo;t be used within prerequisite
+lists, so that <code>$(@D)</code> will expand to nothing. That is easily fixed by enabling
+<a href="https://www.gnu.org/software/make/manual/html_node/Secondary-Expansion.html">secondary expansion</a>, which is a feature of make whereby the prerequisite
+list is expanded twice, and the second time around, automatic variables are in
+scope. That looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile"><span style="color:#a6e22e">.SECONDEXPANSION</span><span style="color:#f92672">:</span>
+
+<span style="color:#a6e22e">$(BUILD_DIR)/%.o</span><span style="color:#f92672">:</span> src/%.c | $<span style="color:#66d9ef">$(</span>@D<span style="color:#66d9ef">)</span>
+	<span style="color:#66d9ef">$(</span>CC<span style="color:#66d9ef">)</span> -c $&lt; -o $@
+</code></pre></div><p>We escape the <code>$(@D)</code> reference so that we expand it only during the second expansion.</p>
+<p>The next issue with this approach is that there now need to be targets for each
+directory that we&rsquo;ll need (<code>build</code>, <code>build/util</code>, and <code>build/foo/bar</code>). We definitely
+don&rsquo;t want to write these out manually:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile"><span style="color:#a6e22e">$(BUILD_DIR)</span><span style="color:#f92672">:</span>
+	mkdir -p $@
+
+<span style="color:#a6e22e">$(BUILD_DIR)/util</span><span style="color:#f92672">:</span>
+	mkdir -p $@
+
+<span style="color:#a6e22e">$(BUILD_DIR)/bar/baz</span><span style="color:#f92672">:</span>
+	mkdir -p $@
+</code></pre></div><p>One option is to define a template and evaluate it for each object file:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile"><span style="color:#960050;background-color:#1e0010">define</span> <span style="color:#960050;background-color:#1e0010">define_mkdir_target</span>
+<span style="color:#a6e22e">$(1)</span><span style="color:#f92672">:</span>
+	mkdir -p <span style="color:#66d9ef">$(</span>1<span style="color:#66d9ef">)</span>
+<span style="color:#960050;background-color:#1e0010">endef</span>
+
+<span style="color:#66d9ef">$(</span>foreach dir,<span style="color:#66d9ef">$(</span>sort <span style="color:#66d9ef">$(</span>dir <span style="color:#66d9ef">$(</span>OBJS<span style="color:#66d9ef">)))</span>,<span style="color:#66d9ef">$(</span>eval <span style="color:#66d9ef">$(</span>call define_mkdir_target,<span style="color:#66d9ef">$(</span>dir<span style="color:#66d9ef">))))</span>
+</code></pre></div><p>This is a bit hairy &ndash; we call <code>$(dir $(OBJS))</code> to extract the directory part
+of each object path, and then call <code>$(sort)</code> to filter out duplicates, because
+we don&rsquo;t want to define multiple rules for the same directory if there are
+multiple files in it. Then we evaluate the template for each directory we end
+up with, defining a target for each.</p>
+<p>This does everything we want and works correctly with incremental builds. It&rsquo;s
+good enough for this toy example because we have this handy <code>$(OBJS)</code> variable
+that has all of our targets in it, so we can do this once and forget about it.
+In more complicated projects, we may have many different kinds of targets
+defined in many different places, such that making sure we evaluate this
+template for all of them is a maintenance burden.</p>
+<p>What would be nicer is to define a <a href="https://www.gnu.org/software/make/manual/html_node/Pattern-Rules.html">pattern rule</a> in order to match any
+directory. There isn&rsquo;t really a way to do this for real, but we can cheat a bit
+by defining a naming convention; we&rsquo;ll make sure to always use a trailing slash
+when referring to a directory. Then we can write this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile"><span style="color:#a6e22e">.PRECIOUS</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">$(</span>BUILD_DIR<span style="color:#66d9ef">)</span>/ <span style="color:#66d9ef">$(</span>BUILD_DIR<span style="color:#66d9ef">)</span>%/
+
+<span style="color:#a6e22e">$(BUILD_DIR)/</span><span style="color:#f92672">:</span>
+	mkdir -p $@
+
+<span style="color:#a6e22e">$(BUILD_DIR)%/</span><span style="color:#f92672">:</span>
+	mkdir -p $@
+
+<span style="color:#a6e22e">$(BUILD_DIR)/%.o</span><span style="color:#f92672">:</span> src/%.c | $<span style="color:#66d9ef">$(</span>@D<span style="color:#66d9ef">)</span>/
+	<span style="color:#66d9ef">$(</span>CC<span style="color:#66d9ef">)</span> -c $&lt; -o $@
+</code></pre></div><p>We need both the first and second targets because the <code>%</code> in a pattern rule
+won&rsquo;t match an empty string. And for reasons I don&rsquo;t fully understand, make
+seems to treat the directories as intermediate files and tries to delete them
+(unsuccessfully, since they&rsquo;re not empty) after the build is done, so we mark
+both targets as <code>.PRECIOUS</code> to get around this. But that&rsquo;s all we ever need &ndash;
+as we grow our project and add new build rules for different kinds of
+artifacts, everything will work as expected as long as we specify <code>$$(@D)/</code> as
+an order-only prerequisite for every target.</p>
+<p>One last little snag is that this doesn&rsquo;t work in make 3.81. There, the
+trailing slash in the prerequisite is apparently ignored, so our pattern rule
+doesn&rsquo;t match. For <a href="https://savannah.gnu.org/bugs/index.php?33034">historical reasons</a>, 3.81 was quite a
+long-lived release of make and is the default version of make available in many
+Linux distributions, as well as the version that ships with OS X, so we may
+want to support it.</p>
+<p>We can work around the make 3.81 behavior by changing our naming convention to
+also include a trailing <code>.</code>. While this looks a bit funny, it doesn&rsquo;t change
+the path being referred to, and make 3.81 won&rsquo;t strip it out. So our final
+Makefile looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile">BUILD_DIR <span style="color:#f92672">:=</span> build
+
+SRCS <span style="color:#f92672">:=</span> main.c foo/bar/baz.c util/log.c
+OBJS <span style="color:#f92672">:=</span> <span style="color:#66d9ef">$(</span>addprefix <span style="color:#66d9ef">$(</span>BUILD_DIR<span style="color:#66d9ef">)</span>/,<span style="color:#66d9ef">$(</span>patsubst %.c,%.o,<span style="color:#66d9ef">$(</span>SRCS<span style="color:#66d9ef">)))</span>
+
+<span style="color:#a6e22e">.PHONY</span><span style="color:#f92672">:</span> program
+<span style="color:#a6e22e">program</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">$(</span>BUILD_DIR<span style="color:#66d9ef">)</span>/program
+
+<span style="color:#a6e22e">.PRECIOUS</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">$(</span>BUILD_DIR<span style="color:#66d9ef">)</span>/. <span style="color:#66d9ef">$(</span>BUILD_DIR<span style="color:#66d9ef">)</span>%/.
+
+<span style="color:#a6e22e">$(BUILD_DIR)/.</span><span style="color:#f92672">:</span>
+	mkdir -p $@
+
+<span style="color:#a6e22e">$(BUILD_DIR)%/.</span><span style="color:#f92672">:</span>
+	mkdir -p $@
+
+<span style="color:#a6e22e">.SECONDEXPANSION</span><span style="color:#f92672">:</span>
+
+<span style="color:#a6e22e">$(BUILD_DIR)/%.o</span><span style="color:#f92672">:</span> src/%.c | $<span style="color:#66d9ef">$(</span>@D<span style="color:#66d9ef">)</span>/.
+	<span style="color:#66d9ef">$(</span>CC<span style="color:#66d9ef">)</span> -c $&lt; -o $@
+
+<span style="color:#a6e22e">$(BUILD_DIR)/program</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">$(</span>OBJS<span style="color:#66d9ef">)</span>
+	<span style="color:#66d9ef">$(</span>CC<span style="color:#66d9ef">)</span> $^ -o $@
+
+</code></pre></div>
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="https://ismail.badawi.io/blog/unintended-stopiteration-in-a-generator/">
+                <span class="button__text">Unintended Stopiteration in a Generator</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+<div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "isbadawi" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="https://ismail.badawi.io/assets/main.js"></script>
+<script src="https://ismail.badawi.io/assets/prism.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Read Only File in Writable Directory :: Ismail Badawi</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="This is a small gotcha about file permissions I ran into recently.
+" />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="https://ismail.badawi.io/blog/read-only-file-in-writable-directory/" />
+
+
+
+
+<link rel="stylesheet" href="https://ismail.badawi.io/assets/style.css">
+
+  <link rel="stylesheet" href="https://ismail.badawi.io/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon" href="https://ismail.badawi.io/img/apple-touch-icon-192x192.png">
+
+  <link rel="shortcut icon" href="https://ismail.badawi.io/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Read Only File in Writable Directory">
+<meta property="og:description" content="This is a small gotcha about file permissions I ran into recently.
+" />
+<meta property="og:url" content="https://ismail.badawi.io/blog/read-only-file-in-writable-directory/" />
+<meta property="og:site_name" content="Ismail Badawi" />
+
+  
+    <meta property="og:image" content="https://ismail.badawi.io/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+
+  <meta property="article:published_time" content="2016-03-25 00:00:00 &#43;0000 UTC" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="blue">
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    Ismail Badawi
+  </div>
+</a>
+
+    </div>
+    
+      <div class="menu-trigger">menu</div>
+    
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/about">About</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="https://ismail.badawi.io/blog/read-only-file-in-writable-directory/">Read Only File in Writable Directory</a></h1>
+  <div class="post-meta">
+    
+      <span class="post-date">
+        2016-03-25 
+      </span>
+    
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="https://ismail.badawi.io/tags/unix/">unix</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>This is a small gotcha about file permissions I ran into recently.</p>
+<p>Let&rsquo;s say there is a file on which you don&rsquo;t have write permission:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ls -l file
+-rw-r--r--  <span style="color:#ae81ff">1</span> notyou  somegroup  <span style="color:#ae81ff">68</span> <span style="color:#ae81ff">25</span> Mar 21:12 file
+</code></pre></div><p>You can&rsquo;t write to this file:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ echo <span style="color:#e6db74">&#34;some text&#34;</span> &gt; file
+bash: file: Permission denied
+</code></pre></div><p>However, let&rsquo;s say this file is in a directory on which you do have write
+permission (assuming here that you are in <code>somegroup</code>):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ls -ld .
+drwxrwxr-x  <span style="color:#ae81ff">2</span> notyou  somegroup  <span style="color:#ae81ff">68</span> <span style="color:#ae81ff">25</span> Mar 21:12 dir
+</code></pre></div><p>Now even though you can&rsquo;t modify the file, write permission on the directory
+lets you remove the file and write a new file in its place:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ rm file
+$ echo <span style="color:#e6db74">&#34;some text&#34;</span> &gt; file
+</code></pre></div><p>Depending on the situation, this can be just as good. You don&rsquo;t even have to do
+this manually &ndash;
+<a href="https://github.com/vim/vim/blob/1e7885abe8daa793fd9328d0fd6c456214cb467e/src/fileio.c#L4300-L4307">if you&rsquo;re using vim, then <code>:w!</code> will automatically do this if the file is not writable</a>.</p>
+<p>I encountered a system at work that would inspect the contents of certain files
+to decide whether to allow certain dangerous operations. These files had
+clearly defined owners that you were meant to get in touch with to ask for
+approval &ndash; if approval was granted, they would edit the relevant files for
+you, so that you could go ahead and do what you needed to do. But since the
+files were set up in this way &ndash; read-only in a group-writable directory &ndash; in
+practice anyone could edit them, bypassing whatever restrictions were in place.</p>
+<p>If you&rsquo;re relying on a file being read-only, be mindful of the permissions
+set on any parent directories.</p>
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        <span class="button previous">
+            <a href="https://ismail.badawi.io/blog/unintended-stopiteration-in-a-generator/">
+                <span class="button__icon">←</span>
+                <span class="button__text">Unintended Stopiteration in a Generator</span>
+            </a>
+        </span>
+        
+        
+        <span class="button next">
+            <a href="https://ismail.badawi.io/blog/a-bug-caused-by-using-0-instead-of-null/">
+                <span class="button__text">A Bug Caused by Using 0 Instead of Null</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+<div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "isbadawi" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="https://ismail.badawi.io/assets/main.js"></script>
+<script src="https://ismail.badawi.io/assets/prism.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

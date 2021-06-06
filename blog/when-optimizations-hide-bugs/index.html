@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>When Optimizations Hide Bugs :: Ismail Badawi</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="The past few months at work I&amp;rsquo;ve been working with a large legacy codebase, mostly written in C. In order to debug problems as they come up, I wanted to use gdb &amp;ndash; but it seemed like the program was only ever compiled with optimizations turned on (-O2), which can make using gdb a frustrating experience, as every interesting value you might want to examine has been optimized out.
+After grappling with the build system to pass -O0 in all the right places (a surprisingly difficult task), I found that the program did not link with optimizations turned off. Once I got around that, I ran into a crash in some basic functionality, easily reproducible at -O0, but not -O2. This post contains two tiny contrived programs reproducing those issues.
+" />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="https://ismail.badawi.io/blog/when-optimizations-hide-bugs/" />
+
+
+
+
+<link rel="stylesheet" href="https://ismail.badawi.io/assets/style.css">
+
+  <link rel="stylesheet" href="https://ismail.badawi.io/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon" href="https://ismail.badawi.io/img/apple-touch-icon-192x192.png">
+
+  <link rel="shortcut icon" href="https://ismail.badawi.io/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="When Optimizations Hide Bugs">
+<meta property="og:description" content="The past few months at work I&amp;rsquo;ve been working with a large legacy codebase, mostly written in C. In order to debug problems as they come up, I wanted to use gdb &amp;ndash; but it seemed like the program was only ever compiled with optimizations turned on (-O2), which can make using gdb a frustrating experience, as every interesting value you might want to examine has been optimized out.
+After grappling with the build system to pass -O0 in all the right places (a surprisingly difficult task), I found that the program did not link with optimizations turned off. Once I got around that, I ran into a crash in some basic functionality, easily reproducible at -O0, but not -O2. This post contains two tiny contrived programs reproducing those issues.
+" />
+<meta property="og:url" content="https://ismail.badawi.io/blog/when-optimizations-hide-bugs/" />
+<meta property="og:site_name" content="Ismail Badawi" />
+
+  
+    <meta property="og:image" content="https://ismail.badawi.io/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+
+  <meta property="article:published_time" content="2015-09-07 00:00:00 &#43;0000 UTC" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="blue">
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    Ismail Badawi
+  </div>
+</a>
+
+    </div>
+    
+      <div class="menu-trigger">menu</div>
+    
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/about">About</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="https://ismail.badawi.io/blog/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a></h1>
+  <div class="post-meta">
+    
+      <span class="post-date">
+        2015-09-07 
+      </span>
+    
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="https://ismail.badawi.io/tags/c/">c</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/code/">code</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/compilers/">compilers</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>The past few months at work I&rsquo;ve been working with a large legacy codebase,
+mostly written in C. In order to debug problems as they come up, I wanted to
+use gdb &ndash; but it seemed like the program was only ever compiled with
+optimizations turned on (<code>-O2</code>), which can make using gdb a frustrating
+experience, as every interesting value you might want to examine has been
+optimized out.</p>
+<p>After grappling with the build system to pass <code>-O0</code> in all the right places (a
+surprisingly difficult task), I found that the program did not link with
+optimizations turned off. Once I got around that, I ran into a crash in some
+basic functionality, easily reproducible at <code>-O0</code>, but not <code>-O2</code>. This post
+contains two tiny contrived programs reproducing those issues.</p>
+<h2 id="optimizing-away-a-reference-to-an-undefined-variable">Optimizing away a reference to an undefined variable<a href="#optimizing-away-a-reference-to-an-undefined-variable" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>As I mentioned, although the program compiled at <code>-O0</code>, it did not link. Here&rsquo;s
+a small program that reproduces this. This program is totally contrived, but it
+should hopefully not be too difficult to imagine seeing something like this in
+real code.</p>
+<p>There are three files involved here.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#pragma once
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">int</span> foo_global;
+
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">use_foo_global</span>(<span style="color:#66d9ef">void</span>) {
+  <span style="color:#66d9ef">return</span> foo_global;
+}
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;foo.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">int</span> foo_global <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;foo.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">ok_to_use_foo</span>(<span style="color:#66d9ef">void</span>) {
+  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>) {
+  <span style="color:#66d9ef">if</span> (ok_to_use_foo()) {
+    <span style="color:#66d9ef">return</span> use_foo_global();
+  }
+  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+</code></pre></div><p><code>main.c</code> includes <code>foo.h</code>, which contains a <code>static inline</code> function which
+references a global variable which is defined in <code>foo.c</code>.</p>
+<p>Here&rsquo;s the thing, though &ndash; although <code>main.c</code> includes <code>foo.h</code>, it is actually
+not linked with <code>foo.c</code>. It is built on its own. (In the real code, this
+<code>foo.c</code> was sometimes included in the build and sometimes not, depending on
+which variant of the program you were building.)</p>
+<p>When I compile this with clang without optimizations, I predictably get this
+undefined reference error:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ clang main.c
+Undefined symbols <span style="color:#66d9ef">for</span> architecture x86_64:
+  <span style="color:#e6db74">&#34;_foo_global&#34;</span>, referenced from:
+      _use_foo_global in test-11ddda.o
+ld: symbol<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> not found <span style="color:#66d9ef">for</span> architecture x86_64
+clang-3.6: error: linker command failed with exit code <span style="color:#ae81ff">1</span> <span style="color:#f92672">(</span>use -v to see invocation<span style="color:#f92672">)</span>
+</code></pre></div><p>The program references <code>foo_global</code>, but <code>foo_global</code> is defined in <code>foo.c</code>
+which is not linked into the program.</p>
+<p>Of course, if you look closely, you&rsquo;ll see that the program actually never ends
+up using <code>foo_global</code> at runtime, based on some simple logic which is
+actually constant, but since it includes a function call, clang won&rsquo;t figure
+out at <code>-O0</code> that it is constant. (In the real code, this <code>ok_to_use_foo</code>
+function contained logic involving a few different preprocessor variables, but
+it was still ultimately constant).</p>
+<p>At <code>-O2</code>, clang will easily figure out that the conditional is always false, so
+it will optimize away the branch, which included the only call to that inline
+function, so the function will be optimized away entirely also, taking with it
+the reference to <code>foo_global</code>. Thus the program compiles cleanly and does what
+you&rsquo;d expect:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ clang -O2 main.c
+$ ./a.out
+$ echo $?
+<span style="color:#ae81ff">0</span>
+</code></pre></div><h2 id="optimizing-away-a-corrupted-stack-variable">Optimizing away a corrupted stack variable<a href="#optimizing-away-a-corrupted-stack-variable" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Consider this small program:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">obtain_two_pointers</span>(<span style="color:#66d9ef">void</span> <span style="color:#f92672">**</span>a, <span style="color:#66d9ef">void</span> <span style="color:#f92672">**</span>b) {
+  <span style="color:#f92672">*</span>a <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>a;
+  <span style="color:#f92672">*</span>b <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>b;
+}
+
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>) {
+  <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>c;
+  <span style="color:#66d9ef">int</span> b;
+  <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>a;
+
+  c <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>b;
+  printf(<span style="color:#e6db74">&#34;%c: %p</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, c);
+  obtain_two_pointers(<span style="color:#f92672">&amp;</span>a, <span style="color:#f92672">&amp;</span>b);
+  printf(<span style="color:#e6db74">&#34;%c: %p</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, c);
+  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+</code></pre></div><p>In this contrived program, <code>obtain_two_pointers</code> returns two pointers via
+output parameters. The calling code only cares about the first, so it passes in
+the address of a dummy local variable <code>b</code> to hold the second one.</p>
+<p>When I compile this program with clang without optimizations and run it, I get this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ clang foo.c
+foo.c:14:24: warning: incompatible pointer types passing <span style="color:#e6db74">&#39;int *&#39;</span> to parameter of type <span style="color:#e6db74">&#39;void **&#39;</span>
+      <span style="color:#f92672">[</span>-Wincompatible-pointer-types<span style="color:#f92672">]</span>
+  obtain_two_pointers<span style="color:#f92672">(</span>&amp;a, &amp;b<span style="color:#f92672">)</span>;
+                       ^~
+foo.c:3:47: note: passing argument to parameter <span style="color:#e6db74">&#39;b&#39;</span> here
+static void obtain_two_pointers<span style="color:#f92672">(</span>void **a, void **b<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                                              ^
+<span style="color:#ae81ff">1</span> warning generated.
+$ ./a.out
+c: 0x7fff5118947c
+c: 0x7fff00007fff
+</code></pre></div><p>The problem is that the code was written assuming that pointers were 32 bits
+wide, so that you could fit a pointer inside an <code>int</code> variable. On my machine,
+however, pointers are 64 bits wide, so that when <code>obtain_two_pointers</code> writes
+64 bits into the address of <code>b</code>, it corrupts the value of <code>c</code>, which is next to
+it on <code>main</code>&rsquo;s stack. This explains the output: after calling the function, the
+lower 32 bits of <code>c</code> are overwritten with the beginning of a pointer value. If
+we were to dereference <code>c</code> at this point, the program might crash.</p>
+<p>Incidentally, the warning clang gives here is totally on-point, but this being
+a huge legacy codebase, clang actually generates thousands of warnings, so this
+one went unnoticed. While there are efforts underway to go through and address
+all the warnings, it will probably take years before the program compiles
+cleanly.</p>
+<p>Now let&rsquo;s compile and run this program with optimizations turned on:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ clang -w -O2 foo.c
+$ ./a.out
+c: 0x7fff5c9f9470
+c: 0x7fff5c9f9470
+</code></pre></div><p>What happens here is that <code>c</code> gets optimized out, and the address of <code>b</code> is
+passed to the two <code>printf</code> invocations directly. There is still an extra 32
+bits written onto the stack, but they&rsquo;re harmless. (Actually in this case the
+call to <code>obtain_two_pointers</code> gets inlined so it&rsquo;s not quite that simple. If
+the function is declared <code>extern</code> and defined in another file, like it was in
+the real code, then it&rsquo;s easy to see that <code>c</code> is just optimized out.)</p>
+<h2 id="lessons-learned">Lessons learned<a href="#lessons-learned" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<ul>
+<li>
+<p>Optimizations are behavior preserving, but not undefined behavior preserving.
+In the second program, the implicit cast from <code>int*</code> to <code>void**</code> when <code>&amp;b</code> is
+passed to the function is undefined behavior. That&rsquo;s why optimizing out <code>c</code>
+is a valid transformation even though it changes the behavior of the program.
+(I think.)</p>
+</li>
+<li>
+<p>Being conscientious about compiler warnings can pay off. I&rsquo;ve encountered
+people who say that compiler warnings are more trouble than they&rsquo;re worth,
+because the issues they find are either false positives, or trivial bugs that
+anyone would see. It is true that the bug in the second program is not hard
+to see &ndash; if anyone had had cause to read through that part of the code, they
+would have likely spotted it immediately. Unfortunately, in very large
+codebases, a lot of code is left to rot, only examined if it appears in the
+stack trace of a core file after a crash; at least, that&rsquo;s how I found this
+bug. But the compiler always reads all of the code, so if nothing else it can
+help find these trivial bugs in rarely-read code.</p>
+</li>
+</ul>
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        <span class="button previous">
+            <a href="https://ismail.badawi.io/blog/a-bug-caused-by-using-0-instead-of-null/">
+                <span class="button__icon">←</span>
+                <span class="button__text">A Bug Caused by Using 0 Instead of Null</span>
+            </a>
+        </span>
+        
+        
+        <span class="button next">
+            <a href="https://ismail.badawi.io/blog/the-compositional-nature-of-vim/">
+                <span class="button__text">The Compositional Nature of Vim</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+<div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "isbadawi" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="https://ismail.badawi.io/assets/main.js"></script>
+<script src="https://ismail.badawi.io/assets/prism.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

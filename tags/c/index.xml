@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>c on Ismail Badawi</title>
+    <link>https://ismail.badawi.io/tags/c/</link>
+    <description>Recent content in c on Ismail Badawi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 08 Sep 2015 00:00:00 +0000</lastBuildDate><atom:link href="https://ismail.badawi.io/tags/c/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Bug Caused by Using 0 Instead of Null</title>
+      <link>https://ismail.badawi.io/blog/a-bug-caused-by-using-0-instead-of-null/</link>
+      <pubDate>Tue, 08 Sep 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://ismail.badawi.io/blog/a-bug-caused-by-using-0-instead-of-null/</guid>
+      <description>&lt;p&gt;This is a quick post about a bug I ran into at work which turned out to be
+caused by passing a literal &lt;code&gt;0&lt;/code&gt; instead of &lt;code&gt;NULL&lt;/code&gt; to a function. Here&amp;rsquo;s a
+small program reproducing it:&lt;/p&gt;</description>
+      <content>&lt;p&gt;This is a quick post about a bug I ran into at work which turned out to be
+caused by passing a literal &lt;code&gt;0&lt;/code&gt; instead of &lt;code&gt;NULL&lt;/code&gt; to a function. Here&amp;rsquo;s a
+small program reproducing it:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c&#34; data-lang=&#34;c&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#include&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;stdarg.h&amp;gt;&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#include&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;stdio.h&amp;gt;&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;f&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; arg, ...) {
+  va_list args;
+  va_start(args, arg);
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;p;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; i &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;; i &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt; arg; &lt;span style=&#34;color:#f92672&#34;&gt;++&lt;/span&gt;i) {
+    p &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; va_arg(args, &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;);
+  }
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (p) {
+    printf(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;p was non-null: %p&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\n&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;, p);
+  } &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt; {
+    printf(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;p was null&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\n&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;);
+  }
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt;) {
+  f(&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;);
+  f(&lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;);
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Compiling this as a 64-bit program on an x86-64 processor with clang
+and running it gives this output:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ clang test.c
+$ ./a.out
+p was null
+p was non-null: 0x7fff00000000
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;What is going on here?&lt;/p&gt;
+&lt;p&gt;First, what is this &lt;code&gt;f&lt;/code&gt; function doing? It takes an integer argument,
+followed by a variable number of arguments. It uses the first argument
+to decide which of the variable arguments to look at (starting at 1),
+and interprets it as a pointer value. Thus, if the call looked like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c&#34; data-lang=&#34;c&#34;&gt;f(&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;);
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Then &lt;code&gt;p&lt;/code&gt; would take on the value &lt;code&gt;(int*)3&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;For the two calls in the program, I&amp;rsquo;m passing in 6 literal &lt;code&gt;0&lt;/code&gt;s as the variable
+arguments. The first call examines the 5th one, and the second the 6th one. In
+the first case, &lt;code&gt;p&lt;/code&gt; turns out be 0, as expected. But in the second case, it is
+nonzero. How come?&lt;/p&gt;
+&lt;p&gt;There are two things going on.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;In the &lt;a href=&#34;http://www.x86-64.org/documentation/abi.pdf&#34;&gt;x86-64 calling convention&lt;/a&gt; (refer to section 3.2.3), up to six
+integer arguments can be passed in registers. In the case of &lt;code&gt;f&lt;/code&gt;, this
+includes the fixed positional argument &lt;code&gt;arg&lt;/code&gt;, and then up to 5 arguments. In
+both calls I am passing six extra arguments, so the last one is passed on
+the stack, instead of in a register.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;In C, the literal &lt;code&gt;0&lt;/code&gt; has type &lt;code&gt;int&lt;/code&gt;, which is a 32-bit value. Thus, 32 bits
+worth of zeros are placed on the stack at the call site. But when &lt;code&gt;f&lt;/code&gt;
+interprets the argument as a pointer, it reads 64 bits from the stack. The
+first 32 bits are zeros, but the next 32 are garbage &amp;ndash; whatever happens to
+be on the stack (which could happen to be all zeros, or it might not, as in
+this case).&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;If the last argument was &lt;code&gt;NULL&lt;/code&gt; instead of &lt;code&gt;0&lt;/code&gt;, then 64 bits worth of zeros
+would have been placed on the stack at the call site, since &lt;code&gt;NULL&lt;/code&gt; is typically
+defined as something like &lt;code&gt;((void*)0)&lt;/code&gt;, which is an expression of pointer type.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;m not sure how consistent this behavior is across platforms or compilers. In
+particular, it seems that there exist ABIs where values passed as varargs are
+automatically sign-extended to 64 bits &amp;ndash; so the program here would be fine.&lt;/p&gt;
+&lt;p&gt;I tend to avoid using varargs in C, unless I&amp;rsquo;m just wrapping &lt;code&gt;printf&lt;/code&gt; or
+something. They&amp;rsquo;re not type-checked, which is already giving up a lot, and then
+on 64-bit systems they can be pretty complicated to reason about. Here is an
+&lt;a href=&#34;https://blog.nelhage.com/2010/10/amd64-and-va_arg/&#34;&gt;interesting article&lt;/a&gt; about the implementation of varargs in the amd64
+ABI.&lt;/p&gt;</content>
+    </item>
+    
+    <item>
+      <title>When Optimizations Hide Bugs</title>
+      <link>https://ismail.badawi.io/blog/when-optimizations-hide-bugs/</link>
+      <pubDate>Mon, 07 Sep 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://ismail.badawi.io/blog/when-optimizations-hide-bugs/</guid>
+      <description>&lt;p&gt;The past few months at work I&amp;rsquo;ve been working with a large legacy codebase,
+mostly written in C. In order to debug problems as they come up, I wanted to
+use gdb &amp;ndash; but it seemed like the program was only ever compiled with
+optimizations turned on (&lt;code&gt;-O2&lt;/code&gt;), which can make using gdb a frustrating
+experience, as every interesting value you might want to examine has been
+optimized out.&lt;/p&gt;
+&lt;p&gt;After grappling with the build system to pass &lt;code&gt;-O0&lt;/code&gt; in all the right places (a
+surprisingly difficult task), I found that the program did not link with
+optimizations turned off. Once I got around that, I ran into a crash in some
+basic functionality, easily reproducible at &lt;code&gt;-O0&lt;/code&gt;, but not &lt;code&gt;-O2&lt;/code&gt;. This post
+contains two tiny contrived programs reproducing those issues.&lt;/p&gt;</description>
+      <content>&lt;p&gt;The past few months at work I&amp;rsquo;ve been working with a large legacy codebase,
+mostly written in C. In order to debug problems as they come up, I wanted to
+use gdb &amp;ndash; but it seemed like the program was only ever compiled with
+optimizations turned on (&lt;code&gt;-O2&lt;/code&gt;), which can make using gdb a frustrating
+experience, as every interesting value you might want to examine has been
+optimized out.&lt;/p&gt;
+&lt;p&gt;After grappling with the build system to pass &lt;code&gt;-O0&lt;/code&gt; in all the right places (a
+surprisingly difficult task), I found that the program did not link with
+optimizations turned off. Once I got around that, I ran into a crash in some
+basic functionality, easily reproducible at &lt;code&gt;-O0&lt;/code&gt;, but not &lt;code&gt;-O2&lt;/code&gt;. This post
+contains two tiny contrived programs reproducing those issues.&lt;/p&gt;
+&lt;h2 id=&#34;optimizing-away-a-reference-to-an-undefined-variable&#34;&gt;Optimizing away a reference to an undefined variable&lt;/h2&gt;
+&lt;p&gt;As I mentioned, although the program compiled at &lt;code&gt;-O0&lt;/code&gt;, it did not link. Here&amp;rsquo;s
+a small program that reproduces this. This program is totally contrived, but it
+should hopefully not be too difficult to imagine seeing something like this in
+real code.&lt;/p&gt;
+&lt;p&gt;There are three files involved here.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c&#34; data-lang=&#34;c&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#pragma once
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; foo_global;
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;inline&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;use_foo_global&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt;) {
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; foo_global;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c&#34; data-lang=&#34;c&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#include&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;&amp;#34;foo.h&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; foo_global &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt;;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c&#34; data-lang=&#34;c&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#include&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;&amp;#34;foo.h&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ok_to_use_foo&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt;) {
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt;) {
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (ok_to_use_foo()) {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; use_foo_global();
+  }
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;main.c&lt;/code&gt; includes &lt;code&gt;foo.h&lt;/code&gt;, which contains a &lt;code&gt;static inline&lt;/code&gt; function which
+references a global variable which is defined in &lt;code&gt;foo.c&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Here&amp;rsquo;s the thing, though &amp;ndash; although &lt;code&gt;main.c&lt;/code&gt; includes &lt;code&gt;foo.h&lt;/code&gt;, it is actually
+not linked with &lt;code&gt;foo.c&lt;/code&gt;. It is built on its own. (In the real code, this
+&lt;code&gt;foo.c&lt;/code&gt; was sometimes included in the build and sometimes not, depending on
+which variant of the program you were building.)&lt;/p&gt;
+&lt;p&gt;When I compile this with clang without optimizations, I predictably get this
+undefined reference error:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ clang main.c
+Undefined symbols &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; architecture x86_64:
+  &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;_foo_global&amp;#34;&lt;/span&gt;, referenced from:
+      _use_foo_global in test-11ddda.o
+ld: symbol&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;s&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; not found &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; architecture x86_64
+clang-3.6: error: linker command failed with exit code &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;use -v to see invocation&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The program references &lt;code&gt;foo_global&lt;/code&gt;, but &lt;code&gt;foo_global&lt;/code&gt; is defined in &lt;code&gt;foo.c&lt;/code&gt;
+which is not linked into the program.&lt;/p&gt;
+&lt;p&gt;Of course, if you look closely, you&amp;rsquo;ll see that the program actually never ends
+up using &lt;code&gt;foo_global&lt;/code&gt; at runtime, based on some simple logic which is
+actually constant, but since it includes a function call, clang won&amp;rsquo;t figure
+out at &lt;code&gt;-O0&lt;/code&gt; that it is constant. (In the real code, this &lt;code&gt;ok_to_use_foo&lt;/code&gt;
+function contained logic involving a few different preprocessor variables, but
+it was still ultimately constant).&lt;/p&gt;
+&lt;p&gt;At &lt;code&gt;-O2&lt;/code&gt;, clang will easily figure out that the conditional is always false, so
+it will optimize away the branch, which included the only call to that inline
+function, so the function will be optimized away entirely also, taking with it
+the reference to &lt;code&gt;foo_global&lt;/code&gt;. Thus the program compiles cleanly and does what
+you&amp;rsquo;d expect:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ clang -O2 main.c
+$ ./a.out
+$ echo $?
+&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;optimizing-away-a-corrupted-stack-variable&#34;&gt;Optimizing away a corrupted stack variable&lt;/h2&gt;
+&lt;p&gt;Consider this small program:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c&#34; data-lang=&#34;c&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#include&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;stdio.h&amp;gt;&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;obtain_two_pointers&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;**&lt;/span&gt;a, &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;**&lt;/span&gt;b) {
+  &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;a &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;a;
+  &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;b &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;b;
+}
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;main&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt;) {
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;c;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; b;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;a;
+
+  c &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;b;
+  printf(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;%c: %p&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\n&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;, c);
+  obtain_two_pointers(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;a, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;b);
+  printf(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;%c: %p&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;\n&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&lt;/span&gt;, c);
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;In this contrived program, &lt;code&gt;obtain_two_pointers&lt;/code&gt; returns two pointers via
+output parameters. The calling code only cares about the first, so it passes in
+the address of a dummy local variable &lt;code&gt;b&lt;/code&gt; to hold the second one.&lt;/p&gt;
+&lt;p&gt;When I compile this program with clang without optimizations and run it, I get this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ clang foo.c
+foo.c:14:24: warning: incompatible pointer types passing &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;int *&amp;#39;&lt;/span&gt; to parameter of type &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;void **&amp;#39;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;[&lt;/span&gt;-Wincompatible-pointer-types&lt;span style=&#34;color:#f92672&#34;&gt;]&lt;/span&gt;
+  obtain_two_pointers&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;&amp;amp;a, &amp;amp;b&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;;
+                       ^~
+foo.c:3:47: note: passing argument to parameter &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;b&amp;#39;&lt;/span&gt; here
+static void obtain_two_pointers&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;void **a, void **b&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;{&lt;/span&gt;
+                                              ^
+&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt; warning generated.
+$ ./a.out
+c: 0x7fff5118947c
+c: 0x7fff00007fff
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The problem is that the code was written assuming that pointers were 32 bits
+wide, so that you could fit a pointer inside an &lt;code&gt;int&lt;/code&gt; variable. On my machine,
+however, pointers are 64 bits wide, so that when &lt;code&gt;obtain_two_pointers&lt;/code&gt; writes
+64 bits into the address of &lt;code&gt;b&lt;/code&gt;, it corrupts the value of &lt;code&gt;c&lt;/code&gt;, which is next to
+it on &lt;code&gt;main&lt;/code&gt;&amp;rsquo;s stack. This explains the output: after calling the function, the
+lower 32 bits of &lt;code&gt;c&lt;/code&gt; are overwritten with the beginning of a pointer value. If
+we were to dereference &lt;code&gt;c&lt;/code&gt; at this point, the program might crash.&lt;/p&gt;
+&lt;p&gt;Incidentally, the warning clang gives here is totally on-point, but this being
+a huge legacy codebase, clang actually generates thousands of warnings, so this
+one went unnoticed. While there are efforts underway to go through and address
+all the warnings, it will probably take years before the program compiles
+cleanly.&lt;/p&gt;
+&lt;p&gt;Now let&amp;rsquo;s compile and run this program with optimizations turned on:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ clang -w -O2 foo.c
+$ ./a.out
+c: 0x7fff5c9f9470
+c: 0x7fff5c9f9470
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;What happens here is that &lt;code&gt;c&lt;/code&gt; gets optimized out, and the address of &lt;code&gt;b&lt;/code&gt; is
+passed to the two &lt;code&gt;printf&lt;/code&gt; invocations directly. There is still an extra 32
+bits written onto the stack, but they&amp;rsquo;re harmless. (Actually in this case the
+call to &lt;code&gt;obtain_two_pointers&lt;/code&gt; gets inlined so it&amp;rsquo;s not quite that simple. If
+the function is declared &lt;code&gt;extern&lt;/code&gt; and defined in another file, like it was in
+the real code, then it&amp;rsquo;s easy to see that &lt;code&gt;c&lt;/code&gt; is just optimized out.)&lt;/p&gt;
+&lt;h2 id=&#34;lessons-learned&#34;&gt;Lessons learned&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Optimizations are behavior preserving, but not undefined behavior preserving.
+In the second program, the implicit cast from &lt;code&gt;int*&lt;/code&gt; to &lt;code&gt;void**&lt;/code&gt; when &lt;code&gt;&amp;amp;b&lt;/code&gt; is
+passed to the function is undefined behavior. That&amp;rsquo;s why optimizing out &lt;code&gt;c&lt;/code&gt;
+is a valid transformation even though it changes the behavior of the program.
+(I think.)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Being conscientious about compiler warnings can pay off. I&amp;rsquo;ve encountered
+people who say that compiler warnings are more trouble than they&amp;rsquo;re worth,
+because the issues they find are either false positives, or trivial bugs that
+anyone would see. It is true that the bug in the second program is not hard
+to see &amp;ndash; if anyone had had cause to read through that part of the code, they
+would have likely spotted it immediately. Unfortunately, in very large
+codebases, a lot of code is left to rot, only examined if it appears in the
+stack trace of a core file after a crash; at least, that&amp;rsquo;s how I found this
+bug. But the compiler always reads all of the code, so if nothing else it can
+help find these trivial bugs in rarely-read code.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;</content>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>python on Ismail Badawi</title>
+    <link>https://ismail.badawi.io/tags/python/</link>
+    <description>Recent content in python on Ismail Badawi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 27 Mar 2016 00:00:00 +0000</lastBuildDate><atom:link href="https://ismail.badawi.io/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Unintended Stopiteration in a Generator</title>
+      <link>https://ismail.badawi.io/blog/unintended-stopiteration-in-a-generator/</link>
+      <pubDate>Sun, 27 Mar 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://ismail.badawi.io/blog/unintended-stopiteration-in-a-generator/</guid>
+      <description>&lt;p&gt;Sometimes, if I have a generator that I happen to know is non-empty, and I want
+to get at the first element, I&amp;rsquo;ll write code like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;output &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; next(f &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; f &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; os&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;listdir(dir) &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; f&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;endswith(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.o&amp;#39;&lt;/span&gt;))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</description>
+      <content>&lt;p&gt;Sometimes, if I have a generator that I happen to know is non-empty, and I want
+to get at the first element, I&amp;rsquo;ll write code like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;output &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; next(f &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; f &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; os&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;listdir(dir) &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; f&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;endswith(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.o&amp;#39;&lt;/span&gt;))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;In theory, the intended meaning of this code is something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;outputs &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [f &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; f &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; os&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;listdir(dir) &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; f&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;endswith(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.o&amp;#39;&lt;/span&gt;)]
+&lt;span style=&#34;color:#66d9ef&#34;&gt;assert&lt;/span&gt; len(outputs) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;# or maybe assert len(outputs) == 1&lt;/span&gt;
+output &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; outputs[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;These two pieces of code are similar, but differ in one important way &amp;ndash; if the
+assumption is wrong (i.e. there is a bug in the program), then the second will
+raise an &lt;code&gt;AssertionError&lt;/code&gt;, while the first will raise a &lt;code&gt;StopIteration&lt;/code&gt;
+exception. If this code happens to be inside a generator, maybe like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;outputs&lt;/span&gt;(dirs):
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; dir &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; dirs:
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;yield&lt;/span&gt; next(f &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; f &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; os&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;listdir(dir) &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; f&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;endswith(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.o&amp;#39;&lt;/span&gt;))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Then while an &lt;code&gt;AssertionError&lt;/code&gt; would correctly bubble up to the caller, a
+&lt;code&gt;StopIteration&lt;/code&gt; exception would instead only prematurely signal that the
+generator is exhausted, and it wouldn&amp;rsquo;t be possible in general for the caller
+to tell that something has gone wrong &amp;ndash; it&amp;rsquo;s likely that the program would
+just keep running and produce wrong results, making the bug potentially much
+less straightforward to track down.&lt;/p&gt;
+&lt;p&gt;So while using &lt;code&gt;next&lt;/code&gt; for this purpose is cute, its behavior in cases like this
+might catch you off guard. If your intention is to communicate an assumption
+you&amp;rsquo;re making, you&amp;rsquo;re probably better off using &lt;code&gt;assert&lt;/code&gt;, even if it&amp;rsquo;s slightly
+more long-winded.&lt;/p&gt;</content>
+    </item>
+    
+  </channel>
+</rss>

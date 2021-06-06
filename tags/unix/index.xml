@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>unix on Ismail Badawi</title>
+    <link>https://ismail.badawi.io/tags/unix/</link>
+    <description>Recent content in unix on Ismail Badawi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 25 Mar 2016 00:00:00 +0000</lastBuildDate><atom:link href="https://ismail.badawi.io/tags/unix/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Read Only File in Writable Directory</title>
+      <link>https://ismail.badawi.io/blog/read-only-file-in-writable-directory/</link>
+      <pubDate>Fri, 25 Mar 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://ismail.badawi.io/blog/read-only-file-in-writable-directory/</guid>
+      <description>&lt;p&gt;This is a small gotcha about file permissions I ran into recently.&lt;/p&gt;</description>
+      <content>&lt;p&gt;This is a small gotcha about file permissions I ran into recently.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s say there is a file on which you don&amp;rsquo;t have write permission:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ ls -l file
+-rw-r--r--  &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt; notyou  somegroup  &lt;span style=&#34;color:#ae81ff&#34;&gt;68&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;25&lt;/span&gt; Mar 21:12 file
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You can&amp;rsquo;t write to this file:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;some text&amp;#34;&lt;/span&gt; &amp;gt; file
+bash: file: Permission denied
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;However, let&amp;rsquo;s say this file is in a directory on which you do have write
+permission (assuming here that you are in &lt;code&gt;somegroup&lt;/code&gt;):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ ls -ld .
+drwxrwxr-x  &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt; notyou  somegroup  &lt;span style=&#34;color:#ae81ff&#34;&gt;68&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;25&lt;/span&gt; Mar 21:12 dir
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now even though you can&amp;rsquo;t modify the file, write permission on the directory
+lets you remove the file and write a new file in its place:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ rm file
+$ echo &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;some text&amp;#34;&lt;/span&gt; &amp;gt; file
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Depending on the situation, this can be just as good. You don&amp;rsquo;t even have to do
+this manually &amp;ndash;
+&lt;a href=&#34;https://github.com/vim/vim/blob/1e7885abe8daa793fd9328d0fd6c456214cb467e/src/fileio.c#L4300-L4307&#34;&gt;if you&amp;rsquo;re using vim, then &lt;code&gt;:w!&lt;/code&gt; will automatically do this if the file is not writable&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I encountered a system at work that would inspect the contents of certain files
+to decide whether to allow certain dangerous operations. These files had
+clearly defined owners that you were meant to get in touch with to ask for
+approval &amp;ndash; if approval was granted, they would edit the relevant files for
+you, so that you could go ahead and do what you needed to do. But since the
+files were set up in this way &amp;ndash; read-only in a group-writable directory &amp;ndash; in
+practice anyone could edit them, bypassing whatever restrictions were in place.&lt;/p&gt;
+&lt;p&gt;If you&amp;rsquo;re relying on a file being read-only, be mindful of the permissions
+set on any parent directories.&lt;/p&gt;</content>
+    </item>
+    
+  </channel>
+</rss>
