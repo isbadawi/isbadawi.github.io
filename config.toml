@@ -1,0 +1,35 @@
+baseURL = ""
+languageCode = "en-us"
+theme = "terminal"
+disqusShortname = "isbadawi"
+
+[params]
+  contentTypeName = "blog"
+  themeColor = "blue"
+  showMenuItems = 2
+  fullWidthTheme = false
+  centerTheme = false
+
+[languages]
+  [languages.en]
+    languageName = "English"
+    title = "Ismail Badawi"
+    keywords = ""
+    copyright = ""
+    menuMore = "Show more"
+    readMore = "Read on"
+    readOtherPosts = "Read other posts"
+    newerPosts = "Newer posts"
+    olderPosts = "Older posts"
+    missingContentMessage = "Page not found..."
+    missingBackButtonLabel = "Back to home page"
+
+    [languages.en.params.logo]
+      logoText = "Ismail Badawi"
+      logoHomeLink = "/"
+
+    [languages.en.menu]
+      [[languages.en.menu.main]]
+        identifier = "about"
+        name = "About"
+        url = "/about"
