@@ -2,6 +2,11 @@ baseURL = ""
 languageCode = "en-us"
 theme = "terminal"
 
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
 [params]
   contentTypeName = "blog"
   themeColor = "blue"
