@@ -2,22 +2,40 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://ismail.badawi.io/tags/badavi/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/blog/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/tags/c/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/tags/code/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/blog/easy-performance-fixes-guided-by-flame-graphs/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/tags/flamegraphs/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/tags/performance/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/tags/profiling/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
+    <loc>https://ismail.badawi.io/tags/</loc>
+    <lastmod>2021-06-08T00:59:44-04:00</lastmod>
+  </url><url>
     <loc>https://ismail.badawi.io/blog/automatic-directory-creation-in-make/</loc>
     <lastmod>2017-03-28T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>https://ismail.badawi.io/blog/</loc>
-    <lastmod>2017-03-28T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://ismail.badawi.io/tags/code/</loc>
-    <lastmod>2017-03-28T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://ismail.badawi.io/</loc>
-    <lastmod>2017-03-28T00:00:00+00:00</lastmod>
-  </url><url>
     <loc>https://ismail.badawi.io/tags/make/</loc>
-    <lastmod>2017-03-28T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://ismail.badawi.io/tags/</loc>
     <lastmod>2017-03-28T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://ismail.badawi.io/tags/python/</loc>
@@ -33,9 +51,6 @@
     <lastmod>2016-03-25T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://ismail.badawi.io/blog/a-bug-caused-by-using-0-instead-of-null/</loc>
-    <lastmod>2015-09-08T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://ismail.badawi.io/tags/c/</loc>
     <lastmod>2015-09-08T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://ismail.badawi.io/tags/compilers/</loc>

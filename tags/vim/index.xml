@@ -21,7 +21,7 @@ it was hard and intimidating. I didn&amp;rsquo;t know how to do anything, least 
 edit text. I learned about insert mode and normal mode. I learned about
 navigating using &lt;code&gt;hjkl&lt;/code&gt;, and deleting the current line with &lt;code&gt;dd&lt;/code&gt;, and saving
 and quitting with &lt;code&gt;:wq&lt;/code&gt;, and for a long time that was it.&lt;/p&gt;
-&lt;!-- raw HTML omitted --&gt;
+&lt;!-- more --&gt;
 &lt;p&gt;Over time I learned more and more. I learned that I could copy the current line
 with &lt;code&gt;yy&lt;/code&gt;, and paste it somewhere with &lt;code&gt;p&lt;/code&gt;. This meant that &lt;code&gt;yyp&lt;/code&gt; duplicated
 the current line! I learned that I could indent the current line with &lt;code&gt;&amp;gt;&amp;gt;&lt;/code&gt;, and

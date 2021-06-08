@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   
-    <title>c :: Ismail Badawi</title>
+    <title>profiling :: Ismail Badawi</title>
   
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="" />
 <meta name="keywords" content="" />
 <meta name="robots" content="noodp" />
-<link rel="canonical" href="https://ismail.badawi.io/tags/c/" />
+<link rel="canonical" href="https://ismail.badawi.io/tags/profiling/" />
 
 
 
@@ -35,9 +35,9 @@
 
 <meta property="og:locale" content="en" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="c">
+<meta property="og:title" content="profiling">
 <meta property="og:description" content="" />
-<meta property="og:url" content="https://ismail.badawi.io/tags/c/" />
+<meta property="og:url" content="https://ismail.badawi.io/tags/profiling/" />
 <meta property="og:site_name" content="Ismail Badawi" />
 
   
@@ -51,7 +51,7 @@
 
 
 
-  <link href="/tags/c/index.xml" rel="alternate" type="application/rss+xml" title="Ismail Badawi" />
+  <link href="/tags/profiling/index.xml" rel="alternate" type="application/rss+xml" title="Ismail Badawi" />
 
 
 
@@ -167,98 +167,6 @@ guided by <a href="https://en.wikipedia.org/wiki/Perf_(Linux)">perf</a> and <a h
         <div>
           <a class="read-more button"
             href="/blog/easy-performance-fixes-guided-by-flame-graphs/">Read on →</a>
-        </div>
-        
-      </div>
-    
-      <div class="post on-list">
-        <h1 class="post-title">
-          <a href="https://ismail.badawi.io/blog/a-bug-caused-by-using-0-instead-of-null/">A Bug Caused by Using 0 Instead of Null</a>
-        </h1>
-        <div class="post-meta">
-          <span class="post-date">
-            2015-09-08
-          </span>
-          
-        </div>
-
-        
-          <span class="post-tags">
-            
-            #<a href="https://ismail.badawi.io/tags/c/">c</a>&nbsp;
-            
-            #<a href="https://ismail.badawi.io/tags/code/">code</a>&nbsp;
-            
-          </span>
-        
-
-        
-
-        <div class="post-content">
-          
-          
-          <p>This is a quick post about a bug I ran into at work which turned out to be
-caused by passing a literal <code>0</code> instead of <code>NULL</code> to a function. Here&rsquo;s a
-small program reproducing it:</p>
-          
-          
-        </div>
-
-        
-        <div>
-          <a class="read-more button"
-            href="/blog/a-bug-caused-by-using-0-instead-of-null/">Read on →</a>
-        </div>
-        
-      </div>
-    
-      <div class="post on-list">
-        <h1 class="post-title">
-          <a href="https://ismail.badawi.io/blog/when-optimizations-hide-bugs/">When Optimizations Hide Bugs</a>
-        </h1>
-        <div class="post-meta">
-          <span class="post-date">
-            2015-09-07
-          </span>
-          
-        </div>
-
-        
-          <span class="post-tags">
-            
-            #<a href="https://ismail.badawi.io/tags/c/">c</a>&nbsp;
-            
-            #<a href="https://ismail.badawi.io/tags/code/">code</a>&nbsp;
-            
-            #<a href="https://ismail.badawi.io/tags/compilers/">compilers</a>&nbsp;
-            
-          </span>
-        
-
-        
-
-        <div class="post-content">
-          
-          
-          <p>The past few months at work I&rsquo;ve been working with a large legacy codebase,
-mostly written in C. In order to debug problems as they come up, I wanted to
-use gdb &ndash; but it seemed like the program was only ever compiled with
-optimizations turned on (<code>-O2</code>), which can make using gdb a frustrating
-experience, as every interesting value you might want to examine has been
-optimized out.</p>
-<p>After grappling with the build system to pass <code>-O0</code> in all the right places (a
-surprisingly difficult task), I found that the program did not link with
-optimizations turned off. Once I got around that, I ran into a crash in some
-basic functionality, easily reproducible at <code>-O0</code>, but not <code>-O2</code>. This post
-contains two tiny contrived programs reproducing those issues.</p>
-          
-          
-        </div>
-
-        
-        <div>
-          <a class="read-more button"
-            href="/blog/when-optimizations-hide-bugs/">Read on →</a>
         </div>
         
       </div>

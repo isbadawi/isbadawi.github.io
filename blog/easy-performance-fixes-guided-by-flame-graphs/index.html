@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Easy Performance Fixes Guided By Flame Graphs :: Ismail Badawi</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="When I was in grad school and struggling with my Master&amp;rsquo;s thesis, I started a small side project in order to distract myself and work on something that felt more rewarding. This project was basically a clone of vim &amp;ndash; a terminal-based text editor I called badavi. That was around seven years ago. I haven&amp;rsquo;t worked on it continuously since then, but I would occasionally go back and hack on it in short little bursts. In particular I&amp;rsquo;ve been doing this the last couple of months, and I thought it might be interesting to write about some of the things I&amp;rsquo;ve been up to.
+For this post, we&amp;rsquo;ll look at some small performance fixes I made recently, guided by perf and flame graphs.
+" />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="https://ismail.badawi.io/blog/easy-performance-fixes-guided-by-flame-graphs/" />
+
+
+
+
+<link rel="stylesheet" href="https://ismail.badawi.io/assets/style.css">
+
+  <link rel="stylesheet" href="https://ismail.badawi.io/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon" href="https://ismail.badawi.io/img/apple-touch-icon-192x192.png">
+
+  <link rel="shortcut icon" href="https://ismail.badawi.io/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Easy Performance Fixes Guided By Flame Graphs">
+<meta property="og:description" content="When I was in grad school and struggling with my Master&amp;rsquo;s thesis, I started a small side project in order to distract myself and work on something that felt more rewarding. This project was basically a clone of vim &amp;ndash; a terminal-based text editor I called badavi. That was around seven years ago. I haven&amp;rsquo;t worked on it continuously since then, but I would occasionally go back and hack on it in short little bursts. In particular I&amp;rsquo;ve been doing this the last couple of months, and I thought it might be interesting to write about some of the things I&amp;rsquo;ve been up to.
+For this post, we&amp;rsquo;ll look at some small performance fixes I made recently, guided by perf and flame graphs.
+" />
+<meta property="og:url" content="https://ismail.badawi.io/blog/easy-performance-fixes-guided-by-flame-graphs/" />
+<meta property="og:site_name" content="Ismail Badawi" />
+
+  
+    <meta property="og:image" content="https://ismail.badawi.io/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+
+  <meta property="article:published_time" content="2021-06-08 00:59:44 -0400 EDT" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="blue">
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    Ismail Badawi
+  </div>
+</a>
+
+    </div>
+    
+      <div class="menu-trigger">menu</div>
+    
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/about">About</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="https://ismail.badawi.io/blog/easy-performance-fixes-guided-by-flame-graphs/">Easy Performance Fixes Guided By Flame Graphs</a></h1>
+  <div class="post-meta">
+    
+      <span class="post-date">
+        2021-06-08 
+      </span>
+    
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="https://ismail.badawi.io/tags/c/">c</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/code/">code</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/badavi/">badavi</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/performance/">performance</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/profiling/">profiling</a>&nbsp;
+    
+    #<a href="https://ismail.badawi.io/tags/flamegraphs/">flamegraphs</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>When I was in grad school and struggling with my Master&rsquo;s thesis, I started a
+small side project in order to distract myself and work on something that felt
+more rewarding. This project was basically a clone of vim &ndash; a terminal-based
+text editor I called <a href="https://github.com/isbadawi/badavi">badavi</a>. That was around seven years ago. I haven&rsquo;t
+worked on it continuously since then, but I would occasionally go back and hack
+on it in short little bursts. In particular I&rsquo;ve been doing this the last
+couple of months, and I thought it might be interesting to write about some of
+the things I&rsquo;ve been up to.</p>
+<p>For this post, we&rsquo;ll look at some small performance fixes I made recently,
+guided by <a href="https://en.wikipedia.org/wiki/Perf_(Linux)">perf</a> and <a href="http://www.brendangregg.com/flamegraphs.html">flame graphs</a>.</p>
+<p>Just for context, badavi is a small C project, something like 5000 lines
+currently. It looks like this (click to expand):</p>
+<p><a href="/images/badavi.png"><img src="/images/badavi.png" alt="badavi screenshot"/></a></p>
+<p>Some features showcased there are split windows, insert mode completion (based
+on ctags), searches, and syntax highlighting.</p>
+<p>The other day I was playing around with perf and flame graphs and decided to
+see if there were any low hanging fruit performance improvements that could be
+made, since I had never profiled the editor before. I used <code>perf record -g</code> to
+profile a short session where I just opened a source file and jumped around the
+file using various <a href="/blog/the-compositional-nature-of-vim/">motions</a>, and generated the corresponding flame graph:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ perf record -g badavi editor.c
+$ perf script | FlameGraph/stackcollapse-perf.pl &gt; out.perf-folded
+$ FlameGraph/flamegraph.pl out.perf-folded &gt; perf.svg
+</code></pre></div><p>This was the result:</p>
+<img src="/images/flamegraphs/perf.before.svg"/>
+<p>From this we can see that the majority of the time was spent inside
+<code>editor_draw</code>. As background, badavi uses a library called <a href="https://github.com/tomas/termbox">termbox</a> to
+interact with the terminal. termbox uses an array of cells as an abstraction
+over the terminal grid; each cell is composed of a character, a foreground
+color, and a background color. In the code, &ldquo;drawing&rdquo; refers to the process of
+populating this array with the right characters and colors for each cell on the
+screen. The array is repopulated from scratch every time we redraw the screen.</p>
+<p>Within <code>editor_draw</code>, we see a few different code paths, but the two dominant
+ones are the syntax highlighting machinery (which begins at <code>syntax_token_at</code>)
+and a call to <code>gb_linecol_to_pos</code>.</p>
+<p>Focusing in on the latter, what&rsquo;s happening there is that for a given window,
+we need to populate the array with the portion of the corresponding file text
+that is visible on the screen. The window knows which line-and-column positions
+are visible, but in order to read the corresponding characters from memory,
+these positions need to be converted to offsets from the start of the file (the
+file text is represented in memory as a <a href="https://en.wikipedia.org/wiki/Gap_buffer">gap buffer</a>, which is similar to a
+big array of characters that can accessed by index). This is what
+<code>gb_linecol_to_pos</code> does, and it was being called once per cell.</p>
+<p>The way this works right now is that alongside the text, the code also
+maintains an array of integers storing the length of each line. Converting a
+line number to an offset involves traversing this array of line lengths and
+adding them up, so the operation is linear in the number of lines.</p>
+<p>I&rsquo;ve considered changing this array from storing line lengths to storing the
+offsets of each newline (or viewed another way, partial sums of the line
+lengths). Then <code>gb_linecol_to_pos</code> could be implemented in constant time, at
+the cost of making edits more expensive. I might do that in the future, but in
+this case, there was an easy win if just avoid calling it repeatedly like this;
+instead, we can get the offset of the first visible character, and increment it
+as needed for subsequent characters instead of recomputing it from scratch.
+That change can be viewed here:
+<a href="https://github.com/isbadawi/badavi/commit/2eceda3db447832fd84b8bc6cc0b9e969e769659">https://github.com/isbadawi/badavi/commit/2eceda3db447832fd84b8bc6cc0b9e969e769659</a>.
+With this change, the flame graph looked like this:</p>
+<img src="/images/flamegraphs/perf.after.svg"/>
+<p>The time was now dominated by syntax highlighting. One of the reasons syntax
+highlighting is expensive is that we end up scanning the whole file, not just
+the visible part, just in case we find the start of a block comment or
+multiline string (depending on the language), which would affect how the
+visible characters should be colored. I had some bigger improvements in mind
+for this, so I decided to just set it aside for now, and just disabled syntax
+highlighting to see if anything else interesting came up. That looked like
+this:</p>
+<img src="/images/flamegraphs/perf.nohighlight.svg"/>
+<p>We see two other code paths that lead to <code>gb_linecol_to_pos</code> and
+<code>gb_pos_to_linecol</code> (the reverse operation, also linear in the number of
+lines). The code path on the right (<code>motion_apply</code> -&gt; <code>down</code>) is the
+implementation of the <code>G</code> motion. As in vim, hitting <code>G</code> in normal mode jumps
+to the bottom of the file. I hadn&rsquo;t noticed that it was slow, since I mostly
+work with small source files, but I opened a large 25000-line source file just
+to see, and found that there was indeed a very noticeable delay after hitting
+<code>G</code>.</p>
+<p>The root cause of the slowness turned out to be a hack that I had put in seven
+years prior, when I first implemented most of the basic motions.</p>
+<p>As in vim, motions in badavi can be prefixed with an integer count, which can
+usually be understood as how many times to repeat the motion. For example,
+<code>34j</code> means to repeat <code>j</code> 34 times, where <code>j</code> means to move down one line.
+Given this, I had written some generic code where motions were represented as
+functions that returned a new position, and specifying a count caused the
+function to be invoked repeatedly in a loop.</p>
+<p>But <code>G</code> works slightly differently; <code>34G</code> means to jump to line 34, not to
+repeat <code>G</code> 34 times. For whatever reason, I decided back then to awkwardly fit
+<code>G</code> into this &ldquo;repeated motion&rdquo; model by implementing it as a repeated <code>j</code> from
+the top of the file, so that for example in a file with 25000 lines, hitting
+<code>G</code> would start from the top of the file and essentially do <code>25000j</code>. And as
+the flame graph shows, the implementation of <code>j</code> calls <code>gb_linecol_to_pos</code> and
+<code>gb_pos_to_linecol</code>. This means <code>G</code> was quadratic in the number of lines.</p>
+<p>I don&rsquo;t really understand why I did it this way; since <code>G</code> ends up being
+special cased anyway, we might as well special case it to directly compute the
+right offset. (Actually it seemed like many of the motions, such as <code>j</code> in this
+example, could be optimized if they were aware of the count instead of being
+blindly called repeatedly, but I decided to leave that for later). The change
+can be viewed here:
+<a href="https://github.com/isbadawi/badavi/commit/3f64704a9dd4c768880f71f7693e7240c44c7529">https://github.com/isbadawi/badavi/commit/3f64704a9dd4c768880f71f7693e7240c44c7529</a>.
+Here is the corresponding flame graph:</p>
+<img src="/images/flamegraphs/perf.fixedg.svg"/>
+<p>The other code path leading to <code>gb_pos_to_linecol</code> was the code that displays
+the line number for each line. badavi supports relative line numbers, similar
+to vim, where rather than displaying the actual line numbers, we display the
+line numbers relative to the line number of the cursor (this can be seen in the
+screenshot above). In the code, windows keep track of their cursor position as
+an offset, so it needs to be converted to a line number, and
+<code>window_draw_line_number</code> just happened to repeatedly recompute it instead of
+doing it once and reusing it. That fix can be viewed here:
+<a href="https://github.com/isbadawi/badavi/commit/13bb413011c9d3cb1732961a3dd069d45aa87105">https://github.com/isbadawi/badavi/commit/13bb413011c9d3cb1732961a3dd069d45aa87105</a>.
+And the corresponding flame graph:</p>
+<img src="/images/flamegraphs/perf.fixedline.svg"/>
+<p>There&rsquo;s not as much an obvious bottleneck here, and we see a broad mix of code
+paths being represented, including the dynamic linking that happens at process
+spawn time, the loading of the source file, and the ctags file, so this seemed
+like a good place to stop for now.</p>
+<p>I found this process to be pretty rewarding. In general, profiling an
+application and looking at flame graphs can often quickly lead to a lot of
+&ldquo;obvious&rdquo; insights that may not have been so obvious just from reading the code
+(especially if this is the first time profiling this application). Not all
+issues are as simple to track down and fix as the ones described in this post,
+but I think it is often the case that many problems become easy if you can just
+see what a program is actually doing.</p>
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="https://ismail.badawi.io/blog/automatic-directory-creation-in-make/">
+                <span class="button__text">Automatic Directory Creation in Make</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+<center>Have a comment on this article? <a href="https://github.com/isbadawi/isbadawi.github.io/discussions">Start a discussion</a> on this blog's GitHub repo.</center>
+
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="https://ismail.badawi.io/assets/main.js"></script>
+<script src="https://ismail.badawi.io/assets/prism.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>
