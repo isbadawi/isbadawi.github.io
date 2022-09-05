@@ -247,10 +247,15 @@ builds in make, and the best approach I&rsquo;ve found for dealing with it.</p>
         <div class="post-content">
           
           
-          <p>Sometimes, if I have a generator that I happen to know is non-empty, and I want
+          <p><em>Update (2022-09-05): The issue described in this post was addressed by <a href="https://peps.python.org/pep-0479/">PEP
+479</a>, which made it so that <code>StopIteration</code>
+is automatically changed into a <code>RuntimeError</code> when raised inside a generator.
+As of python 3.5 (which was already available when this post was written), it
+was possible to opt into the new behavior with <code>from __future__ import generator_stop</code>, and the default was changed in python 3.7.</em></p>
+<p>Sometimes, if I have a generator that I happen to know is non-empty, and I want
 to get at the first element, I&rsquo;ll write code like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">output <span style="color:#f92672">=</span> next(f <span style="color:#66d9ef">for</span> f <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>listdir(dir) <span style="color:#66d9ef">if</span> f<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;.o&#39;</span>))
-</code></pre></div>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>output <span style="color:#f92672">=</span> next(f <span style="color:#66d9ef">for</span> f <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>listdir(dir) <span style="color:#66d9ef">if</span> f<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;.o&#39;</span>))
+</span></span></code></pre></div>
           
           
         </div>
@@ -543,7 +548,7 @@ for Java.</p>
   <div class="footer__inner">
     
       <div class="copyright">
-        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+        <span>© 2022 Powered by <a href="http://gohugo.io">Hugo</a></span>
     
         <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
       </div>

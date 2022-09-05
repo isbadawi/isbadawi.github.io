@@ -141,20 +141,20 @@
   <div class="post-content"><div>
         <p>This is a small gotcha about file permissions I ran into recently.</p>
 <p>Let&rsquo;s say there is a file on which you don&rsquo;t have write permission:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ls -l file
--rw-r--r--  <span style="color:#ae81ff">1</span> notyou  somegroup  <span style="color:#ae81ff">68</span> <span style="color:#ae81ff">25</span> Mar 21:12 file
-</code></pre></div><p>You can&rsquo;t write to this file:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ echo <span style="color:#e6db74">&#34;some text&#34;</span> &gt; file
-bash: file: Permission denied
-</code></pre></div><p>However, let&rsquo;s say this file is in a directory on which you do have write
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ ls -l file
+</span></span><span style="display:flex;"><span>-rw-r--r--  <span style="color:#ae81ff">1</span> notyou  somegroup  <span style="color:#ae81ff">68</span> <span style="color:#ae81ff">25</span> Mar 21:12 file
+</span></span></code></pre></div><p>You can&rsquo;t write to this file:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ echo <span style="color:#e6db74">&#34;some text&#34;</span> &gt; file
+</span></span><span style="display:flex;"><span>bash: file: Permission denied
+</span></span></code></pre></div><p>However, let&rsquo;s say this file is in a directory on which you do have write
 permission (assuming here that you are in <code>somegroup</code>):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ls -ld .
-drwxrwxr-x  <span style="color:#ae81ff">2</span> notyou  somegroup  <span style="color:#ae81ff">68</span> <span style="color:#ae81ff">25</span> Mar 21:12 dir
-</code></pre></div><p>Now even though you can&rsquo;t modify the file, write permission on the directory
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ ls -ld .
+</span></span><span style="display:flex;"><span>drwxrwxr-x  <span style="color:#ae81ff">2</span> notyou  somegroup  <span style="color:#ae81ff">68</span> <span style="color:#ae81ff">25</span> Mar 21:12 dir
+</span></span></code></pre></div><p>Now even though you can&rsquo;t modify the file, write permission on the directory
 lets you remove the file and write a new file in its place:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ rm file
-$ echo <span style="color:#e6db74">&#34;some text&#34;</span> &gt; file
-</code></pre></div><p>Depending on the situation, this can be just as good. You don&rsquo;t even have to do
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ rm file
+</span></span><span style="display:flex;"><span>$ echo <span style="color:#e6db74">&#34;some text&#34;</span> &gt; file
+</span></span></code></pre></div><p>Depending on the situation, this can be just as good. You don&rsquo;t even have to do
 this manually &ndash;
 <a href="https://github.com/vim/vim/blob/1e7885abe8daa793fd9328d0fd6c456214cb467e/src/fileio.c#L4300-L4307">if you&rsquo;re using vim, then <code>:w!</code> will automatically do this if the file is not writable</a>.</p>
 <p>I encountered a system at work that would inspect the contents of certain files
@@ -210,7 +210,7 @@ set on any parent directories.</p>
   <div class="footer__inner">
     
       <div class="copyright">
-        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+        <span>© 2022 Powered by <a href="http://gohugo.io">Hugo</a></span>
     
         <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
       </div>

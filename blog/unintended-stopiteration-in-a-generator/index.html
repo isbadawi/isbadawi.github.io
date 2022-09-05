@@ -6,7 +6,8 @@
   
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Sometimes, if I have a generator that I happen to know is non-empty, and I want to get at the first element, I&amp;rsquo;ll write code like this:
+<meta name="description" content="Update (2022-09-05): The issue described in this post was addressed by PEP 479, which made it so that StopIteration is automatically changed into a RuntimeError when raised inside a generator. As of python 3.5 (which was already available when this post was written), it was possible to opt into the new behavior with from __future__ import generator_stop, and the default was changed in python 3.7.
+Sometimes, if I have a generator that I happen to know is non-empty, and I want to get at the first element, I&amp;rsquo;ll write code like this:
 output = next(f for f in os.listdir(dir) if f.endswith(&amp;#39;.o&amp;#39;)) " />
 <meta name="keywords" content="" />
 <meta name="robots" content="noodp" />
@@ -37,7 +38,8 @@ output = next(f for f in os.listdir(dir) if f.endswith(&amp;#39;.o&amp;#39;)) " 
 <meta property="og:locale" content="en" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="Unintended Stopiteration in a Generator">
-<meta property="og:description" content="Sometimes, if I have a generator that I happen to know is non-empty, and I want to get at the first element, I&amp;rsquo;ll write code like this:
+<meta property="og:description" content="Update (2022-09-05): The issue described in this post was addressed by PEP 479, which made it so that StopIteration is automatically changed into a RuntimeError when raised inside a generator. As of python 3.5 (which was already available when this post was written), it was possible to opt into the new behavior with from __future__ import generator_stop, and the default was changed in python 3.7.
+Sometimes, if I have a generator that I happen to know is non-empty, and I want to get at the first element, I&amp;rsquo;ll write code like this:
 output = next(f for f in os.listdir(dir) if f.endswith(&amp;#39;.o&amp;#39;)) " />
 <meta property="og:url" content="https://ismail.badawi.io/blog/unintended-stopiteration-in-a-generator/" />
 <meta property="og:site_name" content="Ismail Badawi" />
@@ -141,21 +143,26 @@ output = next(f for f in os.listdir(dir) if f.endswith(&amp;#39;.o&amp;#39;)) " 
   
 
   <div class="post-content"><div>
-        <p>Sometimes, if I have a generator that I happen to know is non-empty, and I want
+        <p><em>Update (2022-09-05): The issue described in this post was addressed by <a href="https://peps.python.org/pep-0479/">PEP
+479</a>, which made it so that <code>StopIteration</code>
+is automatically changed into a <code>RuntimeError</code> when raised inside a generator.
+As of python 3.5 (which was already available when this post was written), it
+was possible to opt into the new behavior with <code>from __future__ import generator_stop</code>, and the default was changed in python 3.7.</em></p>
+<p>Sometimes, if I have a generator that I happen to know is non-empty, and I want
 to get at the first element, I&rsquo;ll write code like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">output <span style="color:#f92672">=</span> next(f <span style="color:#66d9ef">for</span> f <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>listdir(dir) <span style="color:#66d9ef">if</span> f<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;.o&#39;</span>))
-</code></pre></div><p>In theory, the intended meaning of this code is something like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">outputs <span style="color:#f92672">=</span> [f <span style="color:#66d9ef">for</span> f <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>listdir(dir) <span style="color:#66d9ef">if</span> f<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;.o&#39;</span>)]
-<span style="color:#66d9ef">assert</span> len(outputs) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#75715e"># or maybe assert len(outputs) == 1</span>
-output <span style="color:#f92672">=</span> outputs[<span style="color:#ae81ff">0</span>]
-</code></pre></div><p>These two pieces of code are similar, but differ in one important way &ndash; if the
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>output <span style="color:#f92672">=</span> next(f <span style="color:#66d9ef">for</span> f <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>listdir(dir) <span style="color:#66d9ef">if</span> f<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;.o&#39;</span>))
+</span></span></code></pre></div><p>In theory, the intended meaning of this code is something like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>outputs <span style="color:#f92672">=</span> [f <span style="color:#66d9ef">for</span> f <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>listdir(dir) <span style="color:#66d9ef">if</span> f<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;.o&#39;</span>)]
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">assert</span> len(outputs) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#75715e"># or maybe assert len(outputs) == 1</span>
+</span></span><span style="display:flex;"><span>output <span style="color:#f92672">=</span> outputs[<span style="color:#ae81ff">0</span>]
+</span></span></code></pre></div><p>These two pieces of code are similar, but differ in one important way &ndash; if the
 assumption is wrong (i.e. there is a bug in the program), then the second will
 raise an <code>AssertionError</code>, while the first will raise a <code>StopIteration</code>
 exception. If this code happens to be inside a generator, maybe like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">outputs</span>(dirs):
-  <span style="color:#66d9ef">for</span> dir <span style="color:#f92672">in</span> dirs:
-    <span style="color:#66d9ef">yield</span> next(f <span style="color:#66d9ef">for</span> f <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>listdir(dir) <span style="color:#66d9ef">if</span> f<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;.o&#39;</span>))
-</code></pre></div><p>Then while an <code>AssertionError</code> would correctly bubble up to the caller, a
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">outputs</span>(dirs):
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">for</span> dir <span style="color:#f92672">in</span> dirs:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">yield</span> next(f <span style="color:#66d9ef">for</span> f <span style="color:#f92672">in</span> os<span style="color:#f92672">.</span>listdir(dir) <span style="color:#66d9ef">if</span> f<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;.o&#39;</span>))
+</span></span></code></pre></div><p>Then while an <code>AssertionError</code> would correctly bubble up to the caller, a
 <code>StopIteration</code> exception would instead only prematurely signal that the
 generator is exhausted, and it wouldn&rsquo;t be possible in general for the caller
 to tell that something has gone wrong &ndash; it&rsquo;s likely that the program would
@@ -209,7 +216,7 @@ more long-winded.</p>
   <div class="footer__inner">
     
       <div class="copyright">
-        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+        <span>© 2022 Powered by <a href="http://gohugo.io">Hugo</a></span>
     
         <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
       </div>

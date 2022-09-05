@@ -43,10 +43,10 @@ see if there were any low hanging fruit performance improvements that could be
 made, since I had never profiled the editor before. I used &lt;code&gt;perf record -g&lt;/code&gt; to
 profile a short session where I just opened a source file and jumped around the
 file using various &lt;a href=&#34;https://ismail.badawi.io/blog/the-compositional-nature-of-vim/&#34;&gt;motions&lt;/a&gt;, and generated the corresponding flame graph:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ perf record -g badavi editor.c
-$ perf script | FlameGraph/stackcollapse-perf.pl &amp;gt; out.perf-folded
-$ FlameGraph/flamegraph.pl out.perf-folded &amp;gt; perf.svg
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This was the result:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ perf record -g badavi editor.c
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ perf script | FlameGraph/stackcollapse-perf.pl &amp;gt; out.perf-folded
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ FlameGraph/flamegraph.pl out.perf-folded &amp;gt; perf.svg
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This was the result:&lt;/p&gt;
 &lt;img src=&#34;https://ismail.badawi.io/images/flamegraphs/perf.before.svg&#34;/&gt;
 &lt;p&gt;From this we can see that the majority of the time was spent inside
 &lt;code&gt;editor_draw&lt;/code&gt;. As background, badavi uses a library called &lt;a href=&#34;https://github.com/tomas/termbox&#34;&gt;termbox&lt;/a&gt; to

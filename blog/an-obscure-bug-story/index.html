@@ -164,18 +164,18 @@ always showed up as failing because of this.)</p>
 <p>So this was weird &ndash; why would running a test for coverage change its outcome?</p>
 <p>I don&rsquo;t remember what the test was actually testing, but modulo identifiers the
 relevant bit looked something like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@Test</span>
-<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">testAllOptionsAreVisible</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
-    ImmutableSet<span style="color:#f92672">&lt;</span>Option<span style="color:#f92672">&gt;</span> visibleOptions <span style="color:#f92672">=</span> methodContainingApplicationLogic<span style="color:#f92672">();</span>
-    assertEquals<span style="color:#f92672">(</span>ImmutableSet<span style="color:#f92672">.</span><span style="color:#a6e22e">of</span><span style="color:#f92672">(</span>Option<span style="color:#f92672">.</span><span style="color:#a6e22e">values</span><span style="color:#f92672">()),</span> visibleOptions<span style="color:#f92672">);</span>
-<span style="color:#f92672">}</span>
-</code></pre></div><p>Here <code>ImmutableSet</code> refers to <a href="http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ImmutableSet.html">this Guava collection</a>, and <code>Option</code> is some
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#a6e22e">@Test</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">testAllOptionsAreVisible</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>    ImmutableSet<span style="color:#f92672">&lt;</span>Option<span style="color:#f92672">&gt;</span> visibleOptions <span style="color:#f92672">=</span> methodContainingApplicationLogic<span style="color:#f92672">();</span>
+</span></span><span style="display:flex;"><span>    assertEquals<span style="color:#f92672">(</span>ImmutableSet<span style="color:#f92672">.</span><span style="color:#a6e22e">of</span><span style="color:#f92672">(</span>Option<span style="color:#f92672">.</span><span style="color:#a6e22e">values</span><span style="color:#f92672">()),</span> visibleOptions<span style="color:#f92672">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>Here <code>ImmutableSet</code> refers to <a href="http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/collect/ImmutableSet.html">this Guava collection</a>, and <code>Option</code> is some
 enum defined by the application. In Java, all enums are automatically equipped with a
 static <code>values()</code> method, which returns an array of all the values on that enum, and so
 the intent here is to build a set containing all the enum values and compare that against
 the set built up by the test&rsquo;s setup logic.</p>
 <p>Digging through the error logs of the coverage run, the error looked liked this:</p>
-<pre><code>java.lang.AssertionError: expected:&lt;[Lcom.google.ads.whatever.Option;@12345678&gt; but was:&lt;[FOO, BAR, BAZ]&gt;
+<pre tabindex="0"><code>java.lang.AssertionError: expected:&lt;[Lcom.google.ads.whatever.Option;@12345678&gt; but was:&lt;[FOO, BAR, BAZ]&gt;
        at OptionsPageTest.testAllOptionsAreVisible(OptionsPageTest.java:42]
 </code></pre><p>If you&rsquo;re a Java person, the problem is fairly obvious; the thing on the left (corresponding to the first argument
 to <code>assertEquals</code>) is an <code>ImmutableSet&lt;Option[]&gt;</code> containing the result of calling <code>values()</code>,
@@ -275,7 +275,7 @@ The coverage run, which ran against the &ldquo;real&rdquo; Guava, failed.</p>
   <div class="footer__inner">
     
       <div class="copyright">
-        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+        <span>© 2022 Powered by <a href="http://gohugo.io">Hugo</a></span>
     
         <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
       </div>

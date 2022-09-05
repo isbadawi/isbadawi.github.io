@@ -144,41 +144,41 @@
         <p>This is a quick post about a bug I ran into at work which turned out to be
 caused by passing a literal <code>0</code> instead of <code>NULL</code> to a function. Here&rsquo;s a
 small program reproducing it:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdarg.h&gt;</span><span style="color:#75715e">
-</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">f</span>(<span style="color:#66d9ef">int</span> arg, ...) {
-  va_list args;
-  va_start(args, arg);
-  <span style="color:#66d9ef">int</span> <span style="color:#f92672">*</span>p;
-  <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> arg; <span style="color:#f92672">++</span>i) {
-    p <span style="color:#f92672">=</span> va_arg(args, <span style="color:#66d9ef">int</span><span style="color:#f92672">*</span>);
-  }
-  <span style="color:#66d9ef">if</span> (p) {
-    printf(<span style="color:#e6db74">&#34;p was non-null: %p</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, p);
-  } <span style="color:#66d9ef">else</span> {
-    printf(<span style="color:#e6db74">&#34;p was null</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-  }
-}
-
-<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>) {
-  f(<span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>);
-  f(<span style="color:#ae81ff">6</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>);
-  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
-}
-</code></pre></div><p>Compiling this as a 64-bit program on an x86-64 processor with clang
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdarg.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">f</span>(<span style="color:#66d9ef">int</span> arg, ...) {
+</span></span><span style="display:flex;"><span>  va_list args;
+</span></span><span style="display:flex;"><span>  va_start(args, arg);
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">int</span> <span style="color:#f92672">*</span>p;
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> arg; <span style="color:#f92672">++</span>i) {
+</span></span><span style="display:flex;"><span>    p <span style="color:#f92672">=</span> va_arg(args, <span style="color:#66d9ef">int</span><span style="color:#f92672">*</span>);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> (p) {
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#e6db74">&#34;p was non-null: %p</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, p);
+</span></span><span style="display:flex;"><span>  } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#e6db74">&#34;p was null</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>) {
+</span></span><span style="display:flex;"><span>  f(<span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>  f(<span style="color:#ae81ff">6</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling this as a 64-bit program on an x86-64 processor with clang
 and running it gives this output:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ clang test.c
-$ ./a.out
-p was null
-p was non-null: 0x7fff00000000
-</code></pre></div><p>What is going on here?</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ clang test.c
+</span></span><span style="display:flex;"><span>$ ./a.out
+</span></span><span style="display:flex;"><span>p was null
+</span></span><span style="display:flex;"><span>p was non-null: 0x7fff00000000
+</span></span></code></pre></div><p>What is going on here?</p>
 <p>First, what is this <code>f</code> function doing? It takes an integer argument,
 followed by a variable number of arguments. It uses the first argument
 to decide which of the variable arguments to look at (starting at 1),
 and interprets it as a pointer value. Thus, if the call looked like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">f(<span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">5</span>);
-</code></pre></div><p>Then <code>p</code> would take on the value <code>(int*)3</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>f(<span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">5</span>);
+</span></span></code></pre></div><p>Then <code>p</code> would take on the value <code>(int*)3</code>.</p>
 <p>For the two calls in the program, I&rsquo;m passing in 6 literal <code>0</code>s as the variable
 arguments. The first call examines the 5th one, and the second the 6th one. In
 the first case, <code>p</code> turns out be 0, as expected. But in the second case, it is
@@ -256,7 +256,7 @@ ABI.</p>
   <div class="footer__inner">
     
       <div class="copyright">
-        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+        <span>© 2022 Powered by <a href="http://gohugo.io">Hugo</a></span>
     
         <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
       </div>

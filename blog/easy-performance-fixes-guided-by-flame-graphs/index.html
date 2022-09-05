@@ -171,10 +171,10 @@ see if there were any low hanging fruit performance improvements that could be
 made, since I had never profiled the editor before. I used <code>perf record -g</code> to
 profile a short session where I just opened a source file and jumped around the
 file using various <a href="/blog/the-compositional-nature-of-vim/">motions</a>, and generated the corresponding flame graph:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ perf record -g badavi editor.c
-$ perf script | FlameGraph/stackcollapse-perf.pl &gt; out.perf-folded
-$ FlameGraph/flamegraph.pl out.perf-folded &gt; perf.svg
-</code></pre></div><p>This was the result:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ perf record -g badavi editor.c
+</span></span><span style="display:flex;"><span>$ perf script | FlameGraph/stackcollapse-perf.pl &gt; out.perf-folded
+</span></span><span style="display:flex;"><span>$ FlameGraph/flamegraph.pl out.perf-folded &gt; perf.svg
+</span></span></code></pre></div><p>This was the result:</p>
 <img src="/images/flamegraphs/perf.before.svg"/>
 <p>From this we can see that the majority of the time was spent inside
 <code>editor_draw</code>. As background, badavi uses a library called <a href="https://github.com/tomas/termbox">termbox</a> to
@@ -309,7 +309,7 @@ see what a program is actually doing.</p>
   <div class="footer__inner">
     
       <div class="copyright">
-        <span>© 2021 Powered by <a href="http://gohugo.io">Hugo</a></span>
+        <span>© 2022 Powered by <a href="http://gohugo.io">Hugo</a></span>
     
         <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
       </div>

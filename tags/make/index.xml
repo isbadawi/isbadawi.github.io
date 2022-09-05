@@ -39,7 +39,7 @@ ground I would have, so I&amp;rsquo;ll just link to it here.&lt;/p&gt;
 builds in make, and the best approach I&amp;rsquo;ve found for dealing with it.&lt;/p&gt;
 &lt;p&gt;Let&amp;rsquo;s say we have a hypothetical source tree like
 this with source files nested in different directories:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$ tree
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;$ tree
 .
 ├── foo
 │   └── bar
@@ -50,7 +50,7 @@ this with source files nested in different directories:&lt;/p&gt;
 
 3 directories, 3 files
 &lt;/code&gt;&lt;/pre&gt;&lt;p&gt;We&amp;rsquo;d like our build directory to mirror this structure, like this:&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;$ tree build
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;$ tree build
 build
 ├── foo
 │   └── bar
@@ -65,77 +65,76 @@ build
 directory exists before we compile the source files inside it. We&amp;rsquo;d like to
 write our makefile to achieve this in a nice way that won&amp;rsquo;t require too much
 maintenance as our project grows. Here&amp;rsquo;s a first attempt:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;BUILD_DIR &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; build
-
-SRCS &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; main.c foo/bar/baz.c util/log.c
-OBJS &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;addprefix &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;patsubst %.c,%.o,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;SRCS&lt;span style=&#34;color:#66d9ef&#34;&gt;)))&lt;/span&gt;
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;.PHONY&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; program
-&lt;span style=&#34;color:#a6e22e&#34;&gt;program&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/program
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c
-	mkdir -p &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/program&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;OBJS&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
-	mkdir -p &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; $^ -o $@
-
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Here &lt;code&gt;$(@D)&lt;/code&gt; is an &lt;a href=&#34;https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html&#34;&gt;automatic variable&lt;/a&gt; which expands to the directory part
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;BUILD_DIR &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; build
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;SRCS &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; main.c foo/bar/baz.c util/log.c
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;OBJS &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;addprefix &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;patsubst %.c,%.o,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;SRCS&lt;span style=&#34;color:#66d9ef&#34;&gt;)))&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;.PHONY&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; program
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;program&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/program
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/program&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;OBJS&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; $^ -o $@
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Here &lt;code&gt;$(@D)&lt;/code&gt; is an &lt;a href=&#34;https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html&#34;&gt;automatic variable&lt;/a&gt; which expands to the directory part
 of the target path. If we run &lt;code&gt;make program&lt;/code&gt;, we get this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ make program
-mkdir -p build
-cc -c src/main.c -o build/main.o
-mkdir -p build/foo/bar
-cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
-mkdir -p build/util
-cc -c src/util/log.c -o build/util/log.o
-mkdir -p build
-cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This does what we want, but it&amp;rsquo;s a bit awkward. One issue is that in
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ make program
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mkdir -p build
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cc -c src/main.c -o build/main.o
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mkdir -p build/foo/bar
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mkdir -p build/util
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cc -c src/util/log.c -o build/util/log.o
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mkdir -p build
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This does what we want, but it&amp;rsquo;s a bit awkward. One issue is that in
 incremental builds, the &lt;code&gt;mkdir&lt;/code&gt; steps will be run again, even though the
 directories definitely exist:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;$ touch src/foo/bar/baz.c
-$ make program
-mkdir -p build/foo/bar
-cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
-mkdir -p build
-cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;For this reason, we should instead modify the rule for object files to specify
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ touch src/foo/bar/baz.c
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ make program
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mkdir -p build/foo/bar
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cc -c src/foo/bar/baz.c -o build/foo/bar/baz.o
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mkdir -p build
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cc build/main.o build/foo/bar/baz.o build/util/log.o -o build/program
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;For this reason, we should instead modify the rule for object files to specify
 the target directory as a prerequisite. In particular, creating directories like
 this is the typical use case for &lt;a href=&#34;https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html&#34;&gt;order-only prerequisites&lt;/a&gt;. So we&amp;rsquo;d like to
 write something like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c | &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;One issue here is that automatic variables can&amp;rsquo;t be used within prerequisite
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c | &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;One issue here is that automatic variables can&amp;rsquo;t be used within prerequisite
 lists, so that &lt;code&gt;$(@D)&lt;/code&gt; will expand to nothing. That is easily fixed by enabling
 &lt;a href=&#34;https://www.gnu.org/software/make/manual/html_node/Secondary-Expansion.html&#34;&gt;secondary expansion&lt;/a&gt;, which is a feature of make whereby the prerequisite
 list is expanded twice, and the second time around, automatic variables are in
 scope. That looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;.SECONDEXPANSION&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c | $&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We escape the &lt;code&gt;$(@D)&lt;/code&gt; reference so that we expand it only during the second expansion.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;.SECONDEXPANSION&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c | $&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We escape the &lt;code&gt;$(@D)&lt;/code&gt; reference so that we expand it only during the second expansion.&lt;/p&gt;
 &lt;p&gt;The next issue with this approach is that there now need to be targets for each
 directory that we&amp;rsquo;ll need (&lt;code&gt;build&lt;/code&gt;, &lt;code&gt;build/util&lt;/code&gt;, and &lt;code&gt;build/foo/bar&lt;/code&gt;). We definitely
 don&amp;rsquo;t want to write these out manually:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-	mkdir -p $@
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/util&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-	mkdir -p $@
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/bar/baz&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-	mkdir -p $@
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;One option is to define a template and evaluate it for each object file:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;define&lt;/span&gt; &lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;define_mkdir_target&lt;/span&gt;
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(1)&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-	mkdir -p &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;1&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
-&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;endef&lt;/span&gt;
-
-&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;foreach dir,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;sort &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;dir &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;OBJS&lt;span style=&#34;color:#66d9ef&#34;&gt;)))&lt;/span&gt;,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;eval &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;call define_mkdir_target,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;dir&lt;span style=&#34;color:#66d9ef&#34;&gt;))))&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is a bit hairy &amp;ndash; we call &lt;code&gt;$(dir $(OBJS))&lt;/code&gt; to extract the directory part
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p $@
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/util&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p $@
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/bar/baz&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p $@
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;One option is to define a template and evaluate it for each object file:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;define&lt;/span&gt; &lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;define_mkdir_target&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(1)&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;1&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;endef&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;foreach dir,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;sort &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;dir &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;OBJS&lt;span style=&#34;color:#66d9ef&#34;&gt;)))&lt;/span&gt;,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;eval &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;call define_mkdir_target,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;dir&lt;span style=&#34;color:#66d9ef&#34;&gt;))))&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This is a bit hairy &amp;ndash; we call &lt;code&gt;$(dir $(OBJS))&lt;/code&gt; to extract the directory part
 of each object path, and then call &lt;code&gt;$(sort)&lt;/code&gt; to filter out duplicates, because
 we don&amp;rsquo;t want to define multiple rules for the same directory if there are
 multiple files in it. Then we evaluate the template for each directory we end
@@ -150,17 +149,17 @@ template for all of them is a maintenance burden.&lt;/p&gt;
 directory. There isn&amp;rsquo;t really a way to do this for real, but we can cheat a bit
 by defining a naming convention; we&amp;rsquo;ll make sure to always use a trailing slash
 when referring to a directory. Then we can write this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;.PRECIOUS&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/ &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;%/
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-	mkdir -p $@
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)%/&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-	mkdir -p $@
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c | $&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We need both the first and second targets because the &lt;code&gt;%&lt;/code&gt; in a pattern rule
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;.PRECIOUS&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/ &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;%/
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p $@
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)%/&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p $@
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c | $&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We need both the first and second targets because the &lt;code&gt;%&lt;/code&gt; in a pattern rule
 won&amp;rsquo;t match an empty string. And for reasons I don&amp;rsquo;t fully understand, make
 seems to treat the directories as intermediate files and tries to delete them
 (unsuccessfully, since they&amp;rsquo;re not empty) after the build is done, so we mark
@@ -178,31 +177,30 @@ want to support it.&lt;/p&gt;
 also include a trailing &lt;code&gt;.&lt;/code&gt;. While this looks a bit funny, it doesn&amp;rsquo;t change
 the path being referred to, and make 3.81 won&amp;rsquo;t strip it out. So our final
 Makefile looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;BUILD_DIR &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; build
-
-SRCS &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; main.c foo/bar/baz.c util/log.c
-OBJS &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;addprefix &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;patsubst %.c,%.o,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;SRCS&lt;span style=&#34;color:#66d9ef&#34;&gt;)))&lt;/span&gt;
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;.PHONY&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; program
-&lt;span style=&#34;color:#a6e22e&#34;&gt;program&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/program
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;.PRECIOUS&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/. &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;%/.
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/.&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-	mkdir -p $@
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)%/.&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-	mkdir -p $@
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;.SECONDEXPANSION&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c | $&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/.
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/program&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;OBJS&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; $^ -o $@
-
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</content>
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-makefile&#34; data-lang=&#34;makefile&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;BUILD_DIR &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; build
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;SRCS &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; main.c foo/bar/baz.c util/log.c
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;OBJS &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;addprefix &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;patsubst %.c,%.o,&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;SRCS&lt;span style=&#34;color:#66d9ef&#34;&gt;)))&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;.PHONY&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; program
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;program&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/program
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;.PRECIOUS&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/. &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;BUILD_DIR&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;%/.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/.&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p $@
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)%/.&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	mkdir -p $@
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;.SECONDEXPANSION&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/%.o&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; src/%.c | $&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;@D&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;/.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; -c $&amp;lt; -o $@
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;$(BUILD_DIR)/program&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;OBJS&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;$(&lt;/span&gt;CC&lt;span style=&#34;color:#66d9ef&#34;&gt;)&lt;/span&gt; $^ -o $@
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</content>
     </item>
     
   </channel>
