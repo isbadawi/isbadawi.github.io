@@ -5,6 +5,13 @@ tags = ["python", "code"]
 aliases = ["/blog/2016/03/27/unintended-stopiteration-in-a-generator/"]
 +++
 
+*Update (2022-09-05): The issue described in this post was addressed by [PEP
+479](https://peps.python.org/pep-0479/), which made it so that `StopIteration`
+is automatically changed into a `RuntimeError` when raised inside a generator.
+As of python 3.5 (which was already available when this post was written), it
+was possible to opt into the new behavior with `from __future__ import
+generator_stop`, and the default was changed in python 3.7.*
+
 Sometimes, if I have a generator that I happen to know is non-empty, and I want
 to get at the first element, I'll write code like this:
 
